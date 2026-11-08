@@ -1,0 +1,42 @@
+name: Integrate RustDesk upstream
+
+on:
+  push:
+    branches: [maintenance/upstream-2026-11]
+    paths:
+      - .github/workflows/integrate-upstream.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  merge:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Merge official upstream changes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add official https://github.com/rustdesk/rustdesk-server.git
+          git fetch official master
+          set +e
+          git merge --no-commit --no-ff official/master
+          result=$?
+          set -e
+          if [ "$result" -ne 0 ]; then
+            echo "Conflicting files:"
+            git diff --name-only --diff-filter=U
+            echo "Conflict markers:"
+            git diff --check || true
+            echo "Conflict details:"
+            git status --short
+            exit 1
+          fi
+          git commit -m "Merge official RustDesk Server updates through November 2026"
+          git push origin HEAD:maintenance/upstream-2026-11

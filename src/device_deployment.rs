@@ -30,7 +30,7 @@ fn parse_result(body: &str) -> Decision {
         .and_then(|value| value.get("result")?.as_str().map(str::to_owned))
         .as_deref()
     {
-        Some("OK") | Some("NOT_ENABLED") => Decision::Allowed,
+        Some("OK") => Decision::Allowed,
         Some("NOT_DEPLOYED") => Decision::NotDeployed,
         Some("ID_TAKEN") => Decision::IdTaken,
         _ => Decision::ServiceError,
@@ -81,6 +81,7 @@ mod tests {
     fn checks_companion_api_response() {
         assert_eq!(parse_result(r#"{"result":"OK"}"#), Decision::Allowed);
         assert_eq!(parse_result(r#"{"result":"NOT_DEPLOYED"}"#), Decision::NotDeployed);
+        assert_eq!(parse_result(r#"{"result":"NOT_ENABLED"}"#), Decision::ServiceError);
         assert_eq!(parse_result(r#"{"result":"ID_TAKEN"}"#), Decision::IdTaken);
         assert_eq!(parse_result("garbage"), Decision::ServiceError);
         assert_eq!(parse_result(r#"{"result":"DENIED"}"#), Decision::ServiceError);

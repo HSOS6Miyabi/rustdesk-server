@@ -104,6 +104,11 @@ def main():
                         raise AssertionError("Unapproved device registration was not rejected")
                     if register_device(port, allowed, uuid, pk) != 0:
                         raise AssertionError("Approved device registration did not succeed")
+                    AuthorizationHandler.results[allowed] = "ID_TAKEN"
+                    if register_device(port, allowed, uuid, pk) != 3:
+                        raise AssertionError("Revoked device registration was still accepted")
+                    AuthorizationHandler.results[allowed] = "OK"
+
                     if register_device(port, taken, uuid, pk) != 3:
                         raise AssertionError("Conflicting device ID was not rejected")
                     ids = [item["id"] for item in AuthorizationHandler.received]

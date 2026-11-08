@@ -954,8 +954,12 @@ impl RendezvousServer {
             }
         }
         if changed || ws {
-            // update peer info，解决tcp过程中不更新在线时间的问题
             self.pm.update_pk(id, peer, addr, rk.uuid, rk.pk, ip).await;
+        } else if device_deployment::enabled() {
+            // The identity was approved, even though its persisted key did not change.
+            let mut active = peer.write().await;
+            active.socket_addr = addr;
+            active.last_reg_time = Instant::now();
         }
         Ok(register_pk_response::Result::OK)
         // let mut msg_out = RendezvousMessage::new();
@@ -968,6 +972,10 @@ impl RendezvousServer {
 
     #[inline]
     async fn update_addr(&mut self, id: String, socket_addr: SocketAddr) -> bool {
+        if device_deployment::enabled() {
+            // Always require a new authenticated key registration in managed mode.
+            return true;
+        }
         let (request_pk, ip_change) = if let Some(old) = self.pm.get_in_memory(&id).await {
             let mut old = old.write().await;
             let ip = socket_addr.ip();

@@ -9,6 +9,8 @@ import sys
 import tempfile
 import time
 
+from test_webrtc_rendezvous import check_webrtc_signaling
+
 
 def open_port(port, socktype=socket.SOCK_STREAM):
     sock = socket.socket(socket.AF_INET, socktype)
@@ -108,7 +110,8 @@ def main():
             check_websocket(base + 2)
             check_websocket(base + 3)
             check_udp_rendezvous(base)
-            print("Both servers started; TCP, WebSocket and UDP registration tests passed.")
+            check_webrtc_signaling(base)
+            print("Both servers started; TCP, WebSocket, UDP and WebRTC signaling checks passed.")
         except Exception:
             for stream in logs:
                 stream.flush()

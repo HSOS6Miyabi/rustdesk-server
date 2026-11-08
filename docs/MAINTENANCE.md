@@ -21,3 +21,9 @@
 ## 配置与兼容性
 
 服务器的公共端口、`MUST_LOGIN` 和 `RUSTDESK_API_JWT_KEY` 与原作者的使用方式兼容。实际连接时，客户端提供的设备 ID 仍由 RustDesk 服务端处理。用户分组与联系人控制的是 API 返回的设备可见范围。
+
+## 组合镜像包含的 API 版本
+
+服务端 Docker 镜像包含 RustDesk API 和 `hbbs`、`hbbr`。当前组合镜像使用 RustDesk API `v3.0.0-api.40`，以确保 WebClient v2 的 HTTPS/WSS 支持和管理界面能够正常使用。
+
+如果需要更新组合镜像中的 API 版本，请先确认对应的 `ghcr.io/hsos6miyabi/rustdesk-api` 镜像已经发布，再修改 `docker/Dockerfile` 中的 `API_IMAGE_TAG` 默认值，以及 `.github/workflows/release-server.yml` 的同名构建参数。提交后由 GitHub Actions 测试并发布新镜像。

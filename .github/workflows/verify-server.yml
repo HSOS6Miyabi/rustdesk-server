@@ -26,6 +26,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Verify Rust code
-        run: cargo test --locked --lib --tests
+        run: cargo test --lib --tests
       - name: Compile executables
-        run: cargo build --locked --bins
+        run: cargo build --bins

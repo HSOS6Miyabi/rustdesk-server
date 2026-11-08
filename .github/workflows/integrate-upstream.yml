@@ -41,6 +41,18 @@ jobs:
             git ls-files -u
             exit 1
           fi
+          python3 - <<'PY'
+          from pathlib import Path
+          for filename in ("AGENTS.md", "debian/README.source", "debian/changelog", "src/rendezvous_server.rs"):
+              p = Path(filename)
+              if not p.exists():
+                  continue
+              content = p.read_text()
+              cleaned = "\n".join(line.rstrip() for line in content.splitlines()) + "\n"
+              if cleaned != content:
+                  p.write_text(cleaned)
+          PY
+          git add -A
           git diff --cached --check
           if git diff --cached --quiet; then
             echo "No further upstream changes"

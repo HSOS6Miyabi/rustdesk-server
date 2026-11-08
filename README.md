@@ -20,7 +20,7 @@
 - Docker 镜像：`ghcr.io/hsos6miyabi/rustdesk-server:latest`
 - 仅使用 API 时的镜像：`ghcr.io/hsos6miyabi/rustdesk-api:latest`
 
-每次从主分支 `forapi` 成功发布时，服务端 GitHub Actions 会测试 Rust 源代码、生成两个架构的程序、构建组合镜像，并更新 `latest` 标签。
+开发分支和主分支提交会执行自动化测试。只有在里程碑完成后，从 `v*` 版本标签手动启动工作流并勾选 `milestone_release`，才会生成发行程序、组合镜像并更新 `latest` 标签。
 
 ## 使用组合 Docker 镜像
 

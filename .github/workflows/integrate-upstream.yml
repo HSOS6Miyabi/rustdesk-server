@@ -40,7 +40,7 @@ jobs:
           import pathlib, re
           for f in ('src/rendezvous_server.rs','src/main.rs','README.md','.github/workflows/build.yaml'):
               s=pathlib.Path(f).read_text()
-              matches=re.findall(r'(?ms)^<<<<<<< HEAD\\n(.*?)^=======\\n(.*?)^>>>>>>> [^\\n]*\\n',s)
+              matches=re.findall(r'(?ms)^<<<<<<< HEAD\n(.*?)^=======\n(.*?)^>>>>>>> [^\n]*\n',s)
               print(f, 'conflicts:', len(matches))
               for i, (ours, theirs) in enumerate(matches):
                   print(f'--- CONFLICT {f} #{i+1} ---')

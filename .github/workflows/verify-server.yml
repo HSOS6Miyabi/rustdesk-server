@@ -31,3 +31,5 @@ jobs:
         run: cargo build --bins
       - name: Check live rendezvous and relay services
         run: python3 scripts/test_runtime.py target/debug/hbbs target/debug/hbbr
+      - name: Check managed registration with a running hbbs process
+        run: python3 scripts/test_device_deployment.py target/debug/hbbs

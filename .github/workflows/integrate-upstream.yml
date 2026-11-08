@@ -48,7 +48,7 @@ jobs:
               if not p.exists():
                   continue
               content = p.read_text()
-              cleaned = "\n".join(line.rstrip() for line in content.splitlines()) + "\n"
+              cleaned = "\n".join(line.rstrip() for line in content.splitlines()).rstrip() + "\n"
               if cleaned != content:
                   p.write_text(cleaned)
           PY

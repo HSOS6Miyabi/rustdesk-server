@@ -110,7 +110,10 @@ def main():
             check_websocket(base + 2)
             check_websocket(base + 3)
             check_udp_rendezvous(base)
-            check_webrtc_signaling(base)
+            public_key=(workpath / "id_ed25519.pub").read_text().strip()
+            if not public_key:
+                raise AssertionError("Server generated an empty public key")
+            check_webrtc_signaling(base, public_key)
             print("Both servers started; TCP, WebSocket, UDP and WebRTC signaling checks passed.")
         except Exception:
             for stream in logs:

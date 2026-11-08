@@ -134,7 +134,7 @@ def ws_recv_binary(sock):
     return data
 
 
-def check_webrtc_signaling(base):
+def check_webrtc_signaling(base, server_key):
     """Verify real hbbs registration, SDP forwarding and browser ICE delivery."""
     target = "webrtc-signal-target"
     offer = "webrtc://test-offer-value"
@@ -166,6 +166,7 @@ def check_webrtc_signaling(base):
             punch = (
                 text_field(1, target) +
                 integer_field(2, 2) +
+                text_field(3, server_key) +
                 text_field(12, offer)
             )
             ws_send_binary(caller, raw_field(8, punch))

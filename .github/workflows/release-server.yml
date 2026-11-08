@@ -4,9 +4,13 @@ on:
   push:
     branches:
       - forapi
-    tags:
-      - 'v*'
   workflow_dispatch:
+    inputs:
+      milestone_release:
+        description: 'Confirm publication of a milestone from a v* tag'
+        type: boolean
+        default: false
+        required: true
 
 concurrency:
   group: rustdesk-server-${{ github.ref }}
@@ -81,6 +85,7 @@ jobs:
 
   publish:
     needs: binaries
+    if: github.event_name == 'workflow_dispatch' && inputs.milestone_release && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -109,6 +114,7 @@ jobs:
 
   container:
     needs: binaries
+    if: github.event_name == 'workflow_dispatch' && inputs.milestone_release && startsWith(github.ref, 'refs/tags/v')
     strategy:
       fail-fast: false
       matrix:
@@ -164,6 +170,7 @@ jobs:
 
   manifest:
     needs: container
+    if: github.event_name == 'workflow_dispatch' && inputs.milestone_release && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     steps:
       - uses: docker/setup-buildx-action@v3

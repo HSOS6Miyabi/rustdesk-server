@@ -40,7 +40,6 @@ use hbb_common::{
 use ipnetwork::Ipv4Network;
 
 use crate::jwt;
-use std::io::Error;
 use std::{
     collections::{HashMap, VecDeque},
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
@@ -69,8 +68,6 @@ struct SafeTcpStreamSink {
     encrypt: Option<Encrypt>,
 }
 enum Sink {
-    // TcpStream(TcpStreamSink),
-    // Ws(WsSink),
     Wss(SafeWsSink),
     Tss(SafeTcpStreamSink),
 }
@@ -79,13 +76,11 @@ impl Sink {
     async fn send(&mut self, msg: &RendezvousMessage) {
         if let Ok(mut bytes) = msg.write_to_bytes() {
             match self {
-                // Sink::TcpStream(mut s) => allow_err!(s.send(Bytes::from(bytes)).await),
-                // Sink::Ws(mut s) => allow_err!(s.send(tungstenite::Message::Binary(bytes.into())).await),
                 Sink::Wss(s) => {
                     if let Some(key) = s.encrypt.as_mut() {
                         bytes = key.enc(&bytes);
                     }
-                    allow_err!(s.sink.send(tungstenite::Message::Binary(bytes)).await)
+                    allow_err!(s.sink.send(tungstenite::Message::Binary(bytes.into())).await)
                 }
                 Sink::Tss(s) => {
                     if let Some(key) = s.encrypt.as_mut() {
@@ -779,7 +774,7 @@ impl RendezvousServer {
         let mut states = BytesMut::zeroed((peers.len() + 7) / 8);
         for (i, peer_id) in peers.iter().enumerate() {
             if let Some(peer) = self.pm.get_in_memory(peer_id).await {
-                let elapsed = peer.read().await.last_reg_time.elapsed().as_millis() as i32;
+                let elapsed = peer.read().await.last_reg_time.elapsed().as_millis() as i64;
                 // bytes index from left to right
                 let states_idx = i / 8;
                 let bit_idx = 7 - i % 8;
@@ -1534,7 +1529,7 @@ impl RendezvousServer {
                 encrypt: None,
             }));
             while let Ok(Some(Ok(msg))) = timeout(30_000, b.next()).await {
-                if let tungstenite::Message::Binary(bytes) = msg {
+                if let tungstenite::Message::Binary(bytes.into()) = msg {
                     if !self.handle_tcp(&bytes, &mut sink, addr, key, ws).await {
                         break;
                     }

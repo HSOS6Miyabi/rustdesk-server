@@ -261,3 +261,20 @@ ExecStart=/usr/bin/hbbs
 
 Ports 21118/21119 are only needed for the web client; you can omit them
 otherwise.
+
+## 与 RustDesk API 配合使用的设备登记
+
+以下环境变量用于可选的设备预先登记功能。默认不启用，适合小型团队沿用原来的设备注册方式。
+
+| 环境变量 | 作用 | 示例 |
+| --- | --- | --- |
+| `REQUIRE_DEVICE_DEPLOYMENT` | 设置为 `Y` 后，设备注册前必须获得 API 许可 | `N` |
+| `RUSTDESK_API_INTERNAL_KEY` | API 与服务端之间的内部访问密钥 | 使用随机生成的长字符串 |
+| `RUSTDESK_API_INTERNAL_URL` | 服务端查询设备登记结果的内部接口地址 | `http://127.0.0.1:21114/internal/v1/device/authorize` |
+| `RUSTDESK_API_JWT_KEY` | 要求用户登录时验证会话令牌的密钥 | 与 API 使用相同的密钥 |
+
+组合容器中可以用 `REQUIRE_DEVICE_DEPLOYMENT=Y` 和 `RUSTDESK_API_INTERNAL_KEY` 同时配置 API 与 `hbbs`。API 支持使用相同名称的环境变量。
+
+分开部署时，需要让 `RUSTDESK_API_INTERNAL_URL` 指向 API 的内部服务地址，并限制该接口的网络访问。跨服务器通信建议使用 HTTPS 或可信任的内部网络。
+
+当 `MUST_LOGIN=Y` 时，必须配置 `RUSTDESK_API_JWT_KEY`。不需要限制账户登录时可以继续使用 `MUST_LOGIN=N`。

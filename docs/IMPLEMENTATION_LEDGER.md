@@ -36,3 +36,24 @@
 Rust 单元测试、程序编译、TCP/UDP/WebSocket 实际服务检查由草稿 PR 的 CI 执行。跨项目的设备 `--deploy` 和 `--assign` 需结合 API 测试，详细说明见 [HANDOFF.md](HANDOFF.md)。
 
 发布条件：两个仓库完成相同里程碑后，在 `v*` 标签上手动执行工作流，勾选 `milestone_release`。日常提交不创建 Release。
+
+### 后续功能与测试记录
+
+| 提交 | 修改内容与验证 |
+| --- | --- |
+| [8995074](https://github.com/HSOS6Miyabi/rustdesk-server/commit/89950741e6c156d6ed7cb24c348a97441f3c0ce0) | 更新维护与接手文档 |
+| [cd67739](https://github.com/HSOS6Miyabi/rustdesk-server/commit/cd6773901134fd38ca566af73de906e014257637) | 增加实际运行 `hbbs` 的严格设备登记测试 |
+| [ec48c9b](https://github.com/HSOS6Miyabi/rustdesk-server/commit/ec48c9bb5414d93d9b486cc158cbc42216fb8199) | 严格登记模式下，设备恢复连接时再次检查登记状态 |
+| [bfd1d8e](https://github.com/HSOS6Miyabi/rustdesk-server/commit/bfd1d8e2ca3f7d513e7686f42ead026826606b95) | 仅在 API 也启用严格登记时接受登记许可 |
+
+对应的服务端 CI：[Rust 测试、程序编译及实际服务通信检查](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42519807127)，已通过。
+
+实际运行测试由 `scripts/test_device_deployment.py` 执行，创建本地测试 API，启动真实 `hbbs` 进程，并验证以下情况：
+
+- 尚未登记的设备收到 `NOT_DEPLOYED`。
+- 获得许可的设备可以完成 `RegisterPk`。
+- ID 冲突的设备被拒绝。
+- 已登记设备撤销许可后，再次注册被拒绝。
+- API 返回的 UUID 与公钥在传输过程中保持一致。
+
+该测试使用真实服务进程与模拟 API。完整的实际桌面连接和 `rustdesk --deploy` 操作需要结合配套 API 与 RustDesk 客户端测试。

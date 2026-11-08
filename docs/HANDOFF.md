@@ -29,3 +29,19 @@
 ## 发布要求
 
 日常开发不生成 Release，也不推送发行版 Docker 镜像。达到里程碑并完成测试后，才可使用 `v*` 标签和手动工作流的 `milestone_release` 选项。
+
+## 当前测试通过的提交
+
+- Server：[bfd1d8e](https://github.com/HSOS6Miyabi/rustdesk-server/commit/bfd1d8e2ca3f7d513e7686f42ead026826606b95)。
+- CI：[测试结果](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42519807127)。
+- 配套 API 的最新开发分支会继续更新，接手时应读取 API 草稿 PR #6 的最新提交。
+
+## 本阶段增加的测试
+
+```bash
+python3 scripts/test_device_deployment.py target/debug/hbbs
+```
+
+该脚本会启动临时 HTTP 服务并运行真实 `hbbs`，检查设备许可、冲突、撤销及设备身份信息。
+
+如果严格登记模式已启用，但 API 尚未启用对应设置或暂时无法访问，`hbbs` 将拒绝新的设备登记。未启用严格登记时保留原有设备注册方式。

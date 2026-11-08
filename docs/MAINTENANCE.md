@@ -40,4 +40,4 @@ python3 scripts/test_runtime.py target/debug/hbbs target/debug/hbbr
 
 测试程序启动实际的 `hbbs` 和 `hbbr` 进程，检查 TCP、WebSocket 和 UDP 服务。WebRTC 测试位于 `scripts/test_webrtc_rendezvous.py`，会通过 WebSocket 发起 SDP Offer，模拟被控设备返回 SDP Answer，并发送 ICE 候选地址，检查服务器能否将这些消息转发至正确的设备。
 
-GitHub Actions 在发布组合 Docker 镜像后还会启动镜像内的 API、`hbbs` 和 `hbbr`，检查监听端口和 HTTP 响应。桌面画面、键盘、鼠标及真实设备的长期连接仍需在安装 RustDesk 客户端的运行环境中检查。
+达到里程碑、确认两个仓库功能及测试结果后，从 `v*` 标签手动启动带有 `milestone_release` 选项的发布流程。GitHub Actions 在正式发布组合 Docker 镜像后还会启动镜像内的 API、`hbbs` 和 `hbbr`，检查监听端口和 HTTP 响应。桌面画面、键盘、鼠标及真实设备的长期连接仍需在安装 RustDesk 客户端的运行环境中检查。

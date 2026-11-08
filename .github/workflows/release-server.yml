@@ -8,6 +8,10 @@ on:
       - 'v*'
   workflow_dispatch:
 
+concurrency:
+  group: rustdesk-server-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   packages: write

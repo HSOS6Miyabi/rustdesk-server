@@ -148,7 +148,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           build-args: |
             S6_ARCH=${{ matrix.s6arch }}
-            API_IMAGE_TAG=v3.0.0-api.42
+            API_IMAGE_TAG=v3.0.0-api.94
           push: true
           tags: ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}-${{ matrix.arch }}
 

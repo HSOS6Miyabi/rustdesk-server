@@ -1529,7 +1529,7 @@ impl RendezvousServer {
                 encrypt: None,
             }));
             while let Ok(Some(Ok(msg))) = timeout(30_000, b.next()).await {
-                if let tungstenite::Message::Binary(bytes.into()) = msg {
+                if let tungstenite::Message::Binary(bytes) = msg {
                     if !self.handle_tcp(&bytes, &mut sink, addr, key, ws).await {
                         break;
                     }

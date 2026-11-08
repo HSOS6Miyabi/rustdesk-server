@@ -36,6 +36,17 @@ jobs:
             git diff --check || true
             echo "Conflict details:"
             git status --short
+            python3 - <<'PY'
+          import pathlib, re
+          for f in ('src/rendezvous_server.rs','src/main.rs','README.md','.github/workflows/build.yaml'):
+              s=pathlib.Path(f).read_text()
+              matches=re.findall(r'(?ms)^<<<<<<< HEAD\\n(.*?)^=======\\n(.*?)^>>>>>>> [^\\n]*\\n',s)
+              print(f, 'conflicts:', len(matches))
+              for i, (ours, theirs) in enumerate(matches):
+                  print(f'--- CONFLICT {f} #{i+1} ---')
+                  print('OURS:', ours[:1600])
+                  print('THEIRS:', theirs[:1600])
+          PY
             exit 1
           fi
           git commit -m "Merge official RustDesk Server updates through November 2026"

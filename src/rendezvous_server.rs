@@ -1930,3 +1930,93 @@ fn get_symetric_key_from_msg(
         Err(_) => None,
     }
 }
+
+
+#[cfg(test)]
+mod webrtc_signaling_tests {
+    use super::*;
+
+    #[test]
+    fn accepts_only_matching_bounded_ice_sessions() {
+        let peer: SocketAddr = "192.0.2.2:21116".parse().unwrap();
+        let mut route = WebRtcIceRoute::new("peer-123".to_owned(), peer);
+        let candidate = IceCandidate {
+            id: "peer-123".to_owned(),
+            session_key: "fingerprint-session-a".to_owned(),
+            candidate: "candidate-json".to_owned(),
+            ..Default::default()
+        };
+        assert!(route.accept(&candidate));
+        assert!(route.accept(&candidate));
+        assert_eq!(route.messages, 2);
+        assert!(!route.accept(&IceCandidate {
+            session_key: "another-session".to_owned(),
+            ..candidate.clone()
+        }));
+        assert!(!route.accept(&IceCandidate {
+            candidate: "X".repeat(WEBRTC_ICE_MAX_CANDIDATE+1),
+            ..candidate.clone()
+        }));
+        assert_eq!(route.messages, 2);
+    }
+
+    #[test]
+    fn rejects_stale_and_exhausted_ice_routes() {
+        let peer: SocketAddr = "192.0.2.3:21116".parse().unwrap();
+        let candidate = IceCandidate {
+            session_key: "test-session".to_owned(),
+            candidate: "candidate-json".to_owned(),
+            ..Default::default()
+        };
+        let mut route = WebRtcIceRoute::new("peer".to_owned(), peer);
+        route.created = Instant::now() - WEBRTC_ICE_ROUTE_LIFETIME;
+        assert!(!route.accept(&candidate));
+        let mut route = WebRtcIceRoute::new("peer".to_owned(), peer);
+        route.messages=WEBRTC_ICE_MAX_MESSAGES_PER_ROUTE;
+        assert!(!route.accept(&candidate));
+    }
+
+    #[test]
+    fn carries_webrtc_offer_answer_and_candidates_in_the_rendezvous_protocol() {
+        let mut offer=RendezvousMessage::new();
+        offer.set_punch_hole_request(PunchHoleRequest{
+            id:"remote-123".to_owned(),
+            webrtc_sdp_offer:"webrtc://offer".to_owned(),
+            ..Default::default()
+        });
+        let encoded=offer.write_to_bytes().unwrap();
+        let decoded=RendezvousMessage::parse_from_bytes(&encoded).unwrap();
+        match decoded.union {
+            Some(rendezvous_message::Union::PunchHoleRequest(ph))=>{
+                assert_eq!(ph.webrtc_sdp_offer,"webrtc://offer");
+            }
+            _=>panic!("offer was not preserved"),
+        }
+        let mut answer=RendezvousMessage::new();
+        answer.set_punch_hole_response(PunchHoleResponse{
+            webrtc_sdp_answer:"webrtc://answer".to_owned(),
+            ..Default::default()
+        });
+        let encoded=answer.write_to_bytes().unwrap();
+        match RendezvousMessage::parse_from_bytes(&encoded).unwrap().union {
+            Some(rendezvous_message::Union::PunchHoleResponse(ph))=>{
+                assert_eq!(ph.webrtc_sdp_answer,"webrtc://answer");
+            }
+            _=>panic!("answer was not preserved"),
+        }
+        let mut ice=RendezvousMessage::new();
+        ice.set_ice_candidate(IceCandidate{
+            id:"remote-123".to_owned(),
+            session_key:"session-fingerprint".to_owned(),
+            candidate:"candidate:123".to_owned(),
+            ..Default::default()
+        });
+        let encoded=ice.write_to_bytes().unwrap();
+        match RendezvousMessage::parse_from_bytes(&encoded).unwrap().union {
+            Some(rendezvous_message::Union::IceCandidate(value))=>{
+                assert_eq!(value.session_key,"session-fingerprint");
+            }
+            _=>panic!("ICE candidate was not preserved"),
+        }
+    }
+}

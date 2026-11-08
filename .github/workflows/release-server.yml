@@ -70,9 +70,21 @@ jobs:
           name: server-${{ matrix.arch }}
           path: dist/rustdesk-server-linux-${{ matrix.arch }}.tar.gz
           if-no-files-found: error
-      - name: Write release version
-        shell: bash
+
+  publish:
+    needs: binaries
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: server-*
+          merge-multiple: true
+          path: dist/
+      - name: Determine release version
         id: version
+        shell: bash
         run: |
           if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
             echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
@@ -85,7 +97,7 @@ jobs:
           target_commitish: ${{ github.sha }}
           prerelease: ${{ github.ref_type != 'tag' }}
           generate_release_notes: true
-          files: dist/rustdesk-server-linux-${{ matrix.arch }}.tar.gz
+          files: dist/rustdesk-server-linux-*.tar.gz
 
   container:
     needs: binaries
@@ -159,7 +171,10 @@ jobs:
           else
             TAG="v1.1.17-api.$GITHUB_RUN_NUMBER"
           fi
-          docker buildx imagetools create \
-            -t "$IMAGE:$TAG" \
+          TAGS=(-t "$IMAGE:$TAG")
+          if [[ "$GITHUB_REF" == "refs/heads/forapi" ]]; then
+            TAGS+=(-t "$IMAGE:latest")
+          fi
+          docker buildx imagetools create "${TAGS[@]}" \
             "$IMAGE:$TAG-amd64" "$IMAGE:$TAG-arm64"
           docker buildx imagetools inspect "$IMAGE:$TAG"

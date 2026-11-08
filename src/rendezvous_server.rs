@@ -80,7 +80,7 @@ impl Sink {
         if let Ok(mut bytes) = msg.write_to_bytes() {
             match self {
                 // Sink::TcpStream(mut s) => allow_err!(s.send(Bytes::from(bytes)).await),
-                // Sink::Ws(mut s) => allow_err!(s.send(tungstenite::Message::Binary(bytes)).await),
+                // Sink::Ws(mut s) => allow_err!(s.send(tungstenite::Message::Binary(bytes.into())).await),
                 Sink::Wss(s) => {
                     if let Some(key) = s.encrypt.as_mut() {
                         bytes = key.enc(&bytes);
@@ -104,6 +104,76 @@ type RelayServers = Vec<String>;
 const CHECK_RELAY_TIMEOUT: u64 = 3_000;
 static ALWAYS_USE_RELAY: AtomicBool = AtomicBool::new(false);
 static MUST_LOGIN: AtomicBool = AtomicBool::new(false);
+
+const MAX_RELAY_UUID_LEN: usize = 128;
+
+// The peer sends this uuid to whatever relay_server names, so keep control bytes out of it.
+fn validate_relay_uuid(value: &str) -> Result<(), &'static str> {
+    if value.is_empty()
+        || value.len() > MAX_RELAY_UUID_LEN
+        || !value
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+    {
+        return Err("Invalid relay UUID");
+    }
+    Ok(())
+}
+
+// A peer acknowledging a RequestRelay leaves both fields empty.
+fn validate_relay_response(uuid: &str, relay_server: &str) -> Result<(), &'static str> {
+    if uuid.is_empty() && relay_server.is_empty() {
+        return Ok(());
+    }
+    validate_relay_uuid(uuid)
+}
+
+// An online query for about 5000 ids is the largest message a client sends here.
+const DEFAULT_MAX_MESSAGE_KB: usize = 64;
+// A knob that can be turned to unbounded is not a bound.
+const MAX_MESSAGE_KB_CAP: usize = 64 << 10;
+// tungstenite's default, so raising MAX_MESSAGE_KB does not widen a frame past it.
+const WS_DEFAULT_MAX_FRAME_SIZE: usize = 16 << 20;
+// Every connection pays its read buffer up front, and tungstenite's default is 128 KiB.
+const WS_BUFFER_SIZE: usize = 8 << 10;
+static MAX_MESSAGE: Lazy<usize> =
+    Lazy::new(|| max_message_kb(&get_arg("MAX_MESSAGE_KB")) << 10);
+
+fn max_message_kb(arg: &str) -> usize {
+    match arg.parse::<usize>() {
+        Ok(kb) if kb > 0 => kb.min(MAX_MESSAGE_KB_CAP),
+        _ => DEFAULT_MAX_MESSAGE_KB,
+    }
+}
+
+// Store punch hole requests
+use once_cell::sync::Lazy;
+use tokio::sync::Mutex as TokioMutex; // differentiate if needed
+#[derive(Clone)]
+struct PunchReqEntry { tm: Instant, from_ip: String, to_ip: String, to_id: String }
+static PUNCH_REQS: Lazy<TokioMutex<VecDeque<PunchReqEntry>>> = Lazy::new(|| TokioMutex::new(VecDeque::new()));
+const PUNCH_REQ_DEDUPE_SEC: u64 = 60;
+static PUNCH_REQ_MAX: Lazy<usize> =
+    Lazy::new(|| get_arg("MAX_PUNCH_REQUESTS").parse().unwrap_or(100_000));
+
+async fn record_punch_req(from_ip: String, to_ip: String, to_id: String) {
+    let max = *PUNCH_REQ_MAX;
+    if max == 0 { return; }
+    let mut lock = PUNCH_REQS.lock().await;
+    let mut dup = false;
+    for e in lock.iter().rev().take(30) { // only check recent tail subset for speed
+        if e.from_ip == from_ip && e.to_id == to_id {
+            if e.tm.elapsed().as_secs() < PUNCH_REQ_DEDUPE_SEC { dup = true; }
+            break;
+        }
+    }
+    if !dup {
+        if lock.len() >= max { lock.pop_front(); }
+        lock.push_back(PunchReqEntry { tm: Instant::now(), from_ip, to_ip, to_id });
+    }
+}
+
+
 
 #[derive(Clone)]
 struct Inner {
@@ -656,14 +726,22 @@ impl RendezvousServer {
                     }
                     log::trace!("KeyExchange their_pk: {:?}", hex::encode(&ex.keys[0]));
                     log::trace!("KeyExchange box: {:?}", hex::encode(&ex.keys[1]));
-                    let their_pk: [u8; 32] = ex.keys[0].to_vec().try_into().unwrap();
-                    let cryptobox: [u8; 48] = ex.keys[1].to_vec().try_into().unwrap();
-                    let symetric_key = get_symetric_key_from_msg(
+                    let their_pk: [u8; 32] = match ex.keys[0].to_vec().try_into() {
+                        Ok(pk) => pk,
+                        Err(_) => return false,
+                    };
+                    let cryptobox: [u8; 48] = match ex.keys[1].to_vec().try_into() {
+                        Ok(value) => value,
+                        Err(_) => return false,
+                    };
+                    let symetric_key = match get_symetric_key_from_msg(
                         self.inner.secure_tcp_sk_b.0,
                         their_pk,
                         &cryptobox,
-                    );
-                    log::debug!("KeyExchange symetric key: {:?}", hex::encode(&symetric_key));
+                    ) {
+                        Some(key) => key,
+                        None => return false,
+                    };
                     let key = secretbox::Key::from_slice(&symetric_key);
                     match key {
                         Some(key) => {
@@ -724,7 +802,7 @@ impl RendezvousServer {
         }
         let id = rk.id;
         let ip = addr.ip().to_string();
-        if id.len() < 6 {
+        if id.len() < 6 || id.len() > MAX_PEER_ID_LEN {
             return Err(UUID_MISMATCH);
             //return Err(send_rk_res(socket, addr, UUID_MISMATCH).await);
         } else if !self.check_ip_blocker(&ip, &id).await {
@@ -1463,7 +1541,9 @@ impl RendezvousServer {
                 }
             }
         } else {
-            let (a, mut b) = Framed::new(stream, BytesCodec::new()).split();
+            let mut framed = Framed::new(stream, BytesCodec::new());
+            framed.codec_mut().set_max_packet_length(*MAX_MESSAGE);
+            let (a, mut b) = framed.split();
             sink = Some(Sink::Tss(SafeTcpStreamSink {
                 sink: a,
                 encrypt: None,
@@ -1701,7 +1781,7 @@ fn get_symetric_key_from_msg(
     our_sk_b: [u8; 32],
     their_pk_b: [u8; 32],
     sealed_value: &[u8; 48],
-) -> [u8; 32] {
+) -> Option<[u8; 32]> {
     let their_pk_b = box_::PublicKey(their_pk_b);
     let nonce = box_::Nonce([0u8; box_::NONCEBYTES]);
     let sk = box_::SecretKey(our_sk_b);
@@ -1710,8 +1790,8 @@ fn get_symetric_key_from_msg(
         Ok(key) => {
             let mut key_array = [0u8; 32];
             key_array.copy_from_slice(&key);
-            key_array
+            Some(key_array)
         }
-        Err(e) => panic!("Error while opening the seal key{:?}", e),
+        Err(_) => None,
     }
 }

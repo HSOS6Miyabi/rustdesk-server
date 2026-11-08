@@ -40,6 +40,7 @@ use hbb_common::{
 use ipnetwork::Ipv4Network;
 
 use crate::jwt;
+use crate::device_deployment;
 use std::{
     collections::{HashMap, VecDeque},
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
@@ -346,6 +347,13 @@ impl RendezvousServer {
                     == "Y")
         {
             MUST_LOGIN.store(true, Ordering::SeqCst);
+        }
+
+        if MUST_LOGIN.load(Ordering::SeqCst) && jwt::SECRET.is_empty() {
+            bail!("RUSTDESK_API_JWT_KEY must be configured when MUST_LOGIN=Y");
+        }
+        if device_deployment::enabled() && !device_deployment::configured() {
+            bail!("RUSTDESK_API_INTERNAL_KEY must be configured when REQUIRE_DEVICE_DEPLOYMENT=Y");
         }
 
         log::info!(
@@ -664,6 +672,11 @@ impl RendezvousServer {
                     return true;
                 }
                 Some(rendezvous_message::Union::RequestRelay(mut rf)) => {
+                    if MUST_LOGIN.load(Ordering::SeqCst) &&
+                        (rf.token.is_empty() || jwt::verify_token(&rf.token).is_err()) {
+                        log::warn!("Reject unauthenticated relay request from {}", addr);
+                        return false;
+                    }
                     if let Err(err) = validate_relay_uuid(&rf.uuid) {
                         log::warn!(
                             "Drop RequestRelay from {addr}: {err} (length {})",
@@ -857,6 +870,21 @@ impl RendezvousServer {
         } else if !self.check_ip_blocker(&ip, &id).await {
             return Err(TOO_FREQUENT);
             //return Err(send_rk_res(socket, addr, TOO_FREQUENT).await);
+        }
+        if device_deployment::enabled() {
+            match device_deployment::authorize(&id, &rk.uuid, &rk.pk).await {
+                device_deployment::Decision::Allowed => {}
+                device_deployment::Decision::NotDeployed => {
+                    return Err(register_pk_response::Result::NOT_DEPLOYED);
+                }
+                device_deployment::Decision::IdTaken => {
+                    return Err(register_pk_response::Result::ID_EXISTS);
+                }
+                device_deployment::Decision::ServiceError => {
+                    log::warn!("Device authorization service unavailable for {}", id);
+                    return Err(register_pk_response::Result::SERVER_ERROR);
+                }
+            }
         }
         let peer = self.pm.get_or(&id).await;
         let (changed, ip_changed) = {
@@ -1067,7 +1095,7 @@ impl RendezvousServer {
             });
             return Ok((msg_out, None));
         }
-        // if secret is not empty check token by jwt
+        // Authenticate connection attempts when login is required.
         if MUST_LOGIN.load(Ordering::SeqCst) {
             if ph.token.is_empty() {
                 let mut msg_out = RendezvousMessage::new();
@@ -1076,7 +1104,7 @@ impl RendezvousServer {
                     ..Default::default()
                 });
                 return Ok((msg_out, None));
-            } else if !jwt::SECRET.is_empty() {
+            } else {
                 let token = ph.token;
                 let token = jwt::verify_token(token.as_str());
                 if token.is_err() {

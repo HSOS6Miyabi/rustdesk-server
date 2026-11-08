@@ -52,6 +52,7 @@ jobs:
               if cleaned != content:
                   p.write_text(cleaned)
           PY
+          git restore --source=HEAD --staged --worktree .github/workflows
           git add -A
           git diff --cached --check
           if git diff --cached --quiet; then

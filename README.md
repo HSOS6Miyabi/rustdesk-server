@@ -97,7 +97,7 @@ cargo build --release --locked
 
 在官方 RustDesk 1.5.x 客户端中，可以通过本地设置启用 `enable-webrtc=Y`。WebClient v2 有独立的 WebRTC 连接选项。需要使用能够建立 WebRTC 会话的双方客户端，以及允许必要 UDP 流量的网络。浏览器使用 HTTPS 或本机安全环境。
 
-目前 GitHub Actions 验证了协议处理、Rust 单元测试和跨平台编译。实际网络环境中的桌面画面、输入与长时间稳定连接还需要使用真实设备测试。
+GitHub Actions 已启动实际的 RustDesk 服务进程，验证 TCP、WebSocket、UDP 连接，以及 WebRTC 的 SDP 和 ICE 候选地址转发。Rust 单元测试、跨架构编译和组合容器测试也已经通过。桌面画面、输入与长时间稳定连接还需要使用真实设备测试。
 
 ## 更新、维护和安全
 

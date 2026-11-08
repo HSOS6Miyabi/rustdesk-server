@@ -1,29 +1,25 @@
-networks:
-  rustdesk-net:
-    external: false
 services:
   rustdesk:
-    ports:
-      - 21114:21114
-      - 21115:21115
-      - 21116:21116
-      - 21116:21116/udp
-      - 21117:21117
-      - 21118:21118
-      - 21119:21119
-    image: lejianwen/rustdesk-server-s6:latest
-    environment:
-      - RELAY=<relay_server[:port]>
-      - ENCRYPTED_ONLY=1
-      - MUST_LOGIN=N
-      - TZ=Asia/Shanghai
-      - RUSTDESK_API_RUSTDESK_ID_SERVER=<id_server[:21116]>
-      - RUSTDESK_API_RUSTDESK_RELAY_SERVER=<relay_server[:21117]>
-      - RUSTDESK_API_RUSTDESK_API_SERVER=http://<api_server[:21114]>
-    volumes:
-      - /data/rustdesk/server:/data
-      - /data/rustdesk/api:/app/data #将数据库挂载
-      - /data/rustdesk/server:/app/conf/data #挂载key文件到api容器，可以不用使用 RUSTDESK_API_RUSTDESK_KEY
-    networks:
-      - rustdesk-net
+    image: ghcr.io/hsos6miyabi/rustdesk-server:latest
     restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      RELAY: ${RUSTDESK_RELAY_HOST:-desk.example.com}
+      ENCRYPTED_ONLY: "1"
+      MUST_LOGIN: ${MUST_LOGIN:-N}
+      RUSTDESK_API_RUSTDESK_ID_SERVER: ${RUSTDESK_ID_HOST:-desk.example.com:21116}
+      RUSTDESK_API_RUSTDESK_RELAY_SERVER: ${RUSTDESK_RELAY_SERVER:-desk.example.com:21117}
+      RUSTDESK_API_RUSTDESK_API_SERVER: ${RUSTDESK_API_URL:-https://api.example.com}
+      RUSTDESK_API_RUSTDESK_KEY_FILE: /data/id_ed25519.pub
+      RUSTDESK_API_JWT_KEY: ${RUSTDESK_API_JWT_KEY:?Set RUSTDESK_API_JWT_KEY before starting}
+    ports:
+      - "21114:21114"
+      - "21115:21115"
+      - "21116:21116"
+      - "21116:21116/udp"
+      - "21117:21117"
+      - "21118:21118"
+      - "21119:21119"
+    volumes:
+      - ./data/server:/data
+      - ./data/api:/app/data

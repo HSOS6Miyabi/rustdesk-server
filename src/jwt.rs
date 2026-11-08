@@ -13,7 +13,9 @@ pub struct Claims {
 }
 
 pub fn generate_token(user_id: u32, exp: i64) -> Result<String, String> {
-    println!("secret: {:}", SECRET.to_string());
+    if SECRET.is_empty() {
+        return Err("RUSTDESK_API_JWT_KEY is not configured".to_string());
+    }
     let claims = Claims {
         user_id,
         exp: (chrono::Utc::now() + chrono::Duration::seconds(exp)).timestamp() as usize,
@@ -32,6 +34,9 @@ pub fn generate_token(user_id: u32, exp: i64) -> Result<String, String> {
 }
 // 验证 JWT 的函数
 pub fn verify_token(token: &str) -> Result<Claims, String> {
+    if SECRET.is_empty() {
+        return Err("RUSTDESK_API_JWT_KEY is not configured".to_string());
+    }
     // 解码 JWT
     let validation = Validation::new(Algorithm::HS256);
 

@@ -1,0 +1,63 @@
+name: Integrate RustDesk upstream
+
+on:
+  push:
+    branches:
+      - maintenance/upstream-2026-11
+    paths:
+      - .github/workflows/integrate-upstream.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  merge:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply upstream changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add official https://github.com/rustdesk/rustdesk-server.git
+          git fetch official master
+          set +e
+          git merge --no-commit --no-ff -X ours official/master
+          result=$?
+          set -e
+          if [ "$result" -ne 0 ]; then
+            git checkout --ours .github/workflows/ghcr.yml README-DE.md README-NL.md README-TW.md || true
+            git add .github/workflows/ghcr.yml README-DE.md README-NL.md README-TW.md || true
+            git checkout official/master -- libs/hbb_common
+            git add libs/hbb_common
+          fi
+          if [ -n "$(git ls-files -u)" ]; then
+            echo "Some conflicts require further review"
+            git ls-files -u
+            exit 1
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          for filename in ("AGENTS.md", "debian/README.source", "debian/changelog", "src/rendezvous_server.rs"):
+              p = Path(filename)
+              if not p.exists():
+                  continue
+              content = p.read_text()
+              cleaned = "\n".join(line.rstrip() for line in content.splitlines()).rstrip() + "\n"
+              if cleaned != content:
+                  p.write_text(cleaned)
+          PY
+          git restore --source=HEAD --staged --worktree .github/workflows
+          git add -A
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo "No further upstream changes"
+            exit 0
+          fi
+          git commit -m "Merge official RustDesk Server through 2026-11-07"
+          git push origin HEAD:maintenance/upstream-2026-11

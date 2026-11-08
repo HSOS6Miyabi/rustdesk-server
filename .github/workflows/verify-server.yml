@@ -1,0 +1,31 @@
+name: Verify RustDesk Server
+on:
+  push:
+    branches:
+      - maintenance/upstream-2026-11
+      - forapi
+    tags:
+      - 'v*'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libssl-dev libsodium-dev libsqlite3-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Verify Rust code
+        run: cargo test --lib --tests
+      - name: Compile executables
+        run: cargo build --bins

@@ -1,5 +1,9 @@
 # RustDesk Server 开发实施台账
 
+> **当前项目状态与完整待办清单：[API 与 Server 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)。** 当前已检查的 Server 代码提交为 [646fae0](https://github.com/HSOS6Miyabi/rustdesk-server/commit/646fae03b6c4f7a170e3df394df450701a6b421c)，对应 [CI 42579839266](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42579839266) 已通过；配套 API 的已检查提交为 [7297f1c](https://github.com/HSOS6Miyabi/rustdesk-api/commit/7297f1cfd3f3ccbe6e65856457d1f11c9d9d2033)。此后如有新提交，应先重新检查两个分支的最新状态。
+
+本文件继续保留各项服务端功能的原始提交和测试记录，全部任务的当前状态、优先级与发布条件统一从上述总账查阅。
+
 ## 2026-11-09：设备登记及连接协议兼容
 
 开发分支：`development/m1-device-management`。

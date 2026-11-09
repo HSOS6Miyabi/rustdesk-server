@@ -1,5 +1,7 @@
 # RustDesk Server 接手说明
 
+> **统一交接入口：[两仓库完整实施台账与任务清单](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)。** 其中记录了当前 API 与 Server 的兼容提交、各模块状态、22 项待办事项及 P0 发布前检查。本文保存服务端模块和测试的详细说明。
+
 本项目与 [配套 API](https://github.com/HSOS6Miyabi/rustdesk-api) 共同维护，主要面向小型团队的 OSS 自托管需求。
 
 ## 正在开发

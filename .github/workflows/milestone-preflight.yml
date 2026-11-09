@@ -76,6 +76,11 @@ jobs:
           install -m755 target/release/hbbs docker/rootfs/usr/bin/hbbs
           install -m755 target/release/hbbr docker/rootfs/usr/bin/hbbr
           install -m755 target/release/rustdesk-utils docker/rootfs/usr/bin/rustdesk-utils
+      - name: Verify separate native API, hbbs and hbbr processes across restarts
+        run: |
+          python3 scripts/test_native_stack.py \
+            /tmp/rustdesk-api/docker-bin/apimain \
+            target/release/hbbs target/release/hbbr
       - name: Build combined image without publishing
         run: |
           set -euo pipefail

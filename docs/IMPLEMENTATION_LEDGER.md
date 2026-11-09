@@ -1,6 +1,6 @@
 # RustDesk Server 开发实施台账
 
-> **当前项目状态与完整待办清单：[API 与 Server 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)。** Server 已通过 [Rust 编译和实际服务检查 #42618004098](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42618004098) 以及 [AMD64、ARM64 组合部署和重启检查 #42618003889](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42618003889)。配套 API 的代码及检查以其 [开发分支](https://github.com/HSOS6Miyabi/rustdesk-api/tree/development/m1-device-management) 和 GitHub Actions 最新运行结果为准。两个仓库的拉取请求继续保持草稿状态，尚未发布新版本。
+> **当前项目状态与完整待办清单：[API 与 Server 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)。** Server 已通过 [Rust 编译和实际服务检查 #42620496880](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42620496880) 以及 [AMD64、ARM64 组合部署和重启检查 #42620496807](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42620496807)。配套 API 的代码及检查以其 [开发分支](https://github.com/HSOS6Miyabi/rustdesk-api/tree/development/m1-device-management) 和 GitHub Actions 最新运行结果为准。两个仓库的拉取请求继续保持草稿状态，尚未发布新版本。
 
 本文件继续保留各项服务端功能的原始提交和测试记录，全部任务的当前状态、优先级与发布条件统一从上述总账查阅。
 
@@ -267,3 +267,12 @@ Server 与 API 的开发分支已完成两种部署方式的自动化运行检�
 相关文件为 `scripts/test_native_stack.py`、`scripts/test_persistent_container.py`、`scripts/test_container_image.py` 和 `.github/workflows/milestone-preflight.yml`。测试所用的 API 由同一工作流读取配套开发分支进行编译。镜像仅保存在临时运行环境中，测试结束后清理容器和测试数据卷。
 
 正式使用环境还需分别检查公网连通、系统服务自动启动、备份恢复、真实客户端登录及远程操作。管理者确认首个发布里程碑之前，继续维持草稿拉取请求，不创建正式 Release 或正式 Docker 镜像。
+
+
+## 2026-11-09：与配套 API 版本 282 的兼容性检查
+
+配套 API 当前开发分支的数据库迁移版本为 282，已支持六种桌面系统与架构的官方安装文件、邮件事件通知及数据库备份恢复检查。
+
+Server 的 `.github/workflows/milestone-preflight.yml` 在运行时从配套 API 的 `development/m1-device-management` 获取代码，并在 AMD64、ARM64 上编译两个项目及启动组合容器。此工作流包含普通进程与 Docker 两种部署方式的服务检查，以及重启后 API 数据和 RustDesk 服务端公钥的保持检查。API 数据库备份与恢复说明可通过 [统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md) 查阅。
+
+以上测试均在 GitHub Actions 临时环境运行。真实多平台远程控制、正式 SMTP、地理分布式中继及生产数据库的恢复演练仍属于正式发布前检查项目。两个拉取请求继续保持草稿。

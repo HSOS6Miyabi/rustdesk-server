@@ -99,3 +99,20 @@ python3 scripts/test_connection_access.py target/debug/hbbs
 `.github/workflows/milestone-preflight.yml` 在 AMD64 和 ARM64 上分别读取 API 与 Server 的开发分支，运行 Go、Rust 和 WebClient 测试，构建本地 API 镜像、Server 程序与组合容器镜像，并用 `scripts/test_container_image.py` 启动容器检查真实服务。镜像仅保留在 GitHub Actions 运行器上，不上传正式仓库，也不创建 Release。
 
 已通过的组合检查：[42585097640](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42585097640)。新增 MMDB 的 Rust 单元和实际服务检查：[42588361437](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42588361437)。
+
+
+## 普通服务器进程及数据保持测试
+
+在 API 编译文件和 WebClient 文件均已准备好后，执行以下测试：
+
+```bash
+python3 scripts/test_native_stack.py /path/to/apimain target/release/hbbs target/release/hbbr
+python3 scripts/test_container_image.py rustdesk-combined:dev-preflight
+python3 scripts/test_persistent_container.py rustdesk-combined:dev-preflight
+```
+
+`test_native_stack.py` 在同一临时目录运行 API、`hbbs`、`hbbr`，验证 TCP、UDP、WebSocket、WebClient、重启后的账户、数据库版本及公钥保持一致。
+
+`test_persistent_container.py` 挂载独立的 API 与 Server 数据卷，重新创建 Docker 容器，检查账户、数据库和 RustDesk 身份文件保持一致。整个过程使用测试数据和临时容器，不创建正式发行镜像。
+
+对应 [AMD64、ARM64 组合部署检查 #42620496807](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42620496807)，成功。配套 API 的 SQLite、MySQL 和 PostgreSQL 备份恢复方法见 [数据库备份恢复说明](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/DATABASE_BACKUP_RESTORE.md)。

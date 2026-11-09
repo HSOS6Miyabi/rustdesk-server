@@ -120,7 +120,7 @@ export RUSTDESK_API_CONNECTION_ACCESS_URL="http://127.0.0.1:21114/internal/v1/co
 export RUSTDESK_API_INTERNAL_KEY="与 API 相同的内部通信密钥"
 ```
 
-未配置时保留原有连接行为。配套 API 数据库迁移版本为 280，必须先在管理界面为跨账户访问建立需要的允许规则。严格模式要求登录令牌及 API 中已登记的目标设备。
+未配置时保留原有连接行为。配套 API 当前数据库迁移版本为 282；集中连接访问规则首次引入于版本 280。启用严格权限检查前，应先在管理界面创建相应的允许规则。严格模式要求登录令牌及 API 中已登记的目标设备。
 
 ```bash
 cargo test --lib --tests
@@ -129,3 +129,10 @@ python3 scripts/test_connection_access.py target/debug/hbbs
 ```
 
 对应 Server 代码提交 [4ba02a9](https://github.com/HSOS6Miyabi/rustdesk-server/commit/4ba02a96a0b4eca0aab7bd77ed5c4bafe6d2d0b7)，[CI 测试通过](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42578682536)。
+
+
+## 普通进程和 Docker 的组合测试
+
+配套 API 的开发分支现包括客户端安装文件、通知及自动化管理。Server 的 `.github/workflows/milestone-preflight.yml` 会在 AMD64 和 ARM64 上获取当时的 API 开发分支，启动 API、`hbbs` 和 `hbbr`，检查服务、WebClient、通信端口、数据库和服务器身份密钥的保存情况。
+
+普通服务器进程测试使用 `scripts/test_native_stack.py`，Docker 重建测试使用 `scripts/test_persistent_container.py`。备份、恢复与 API 数据库 282 的相关操作见 [配套 API 数据库备份恢复说明](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/DATABASE_BACKUP_RESTORE.md)。正式环境中的客户端远程操作、公网中继与 SMTP 仍需独立完成测试。

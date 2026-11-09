@@ -373,6 +373,10 @@ def main():
                     )
                 if register_device(hbbs_port, DEVICE, uuid_bytes, public_key_bytes) != 3:
                     raise AssertionError("Revoked deployment remained registered")
+                websocket_request(hbbs_port, 8, punch(admin_token), denied=True)
+                must_not_forward(receiver)
+                websocket_request(hbbs_port, 18, relay(admin_token), denied=True)
+                must_not_forward(receiver)
                 stop_process(api)
                 websocket_request(hbbs_port, 8, punch(admin_token), denied=True)
                 must_not_forward(receiver)

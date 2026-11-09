@@ -44,6 +44,7 @@ use crate::device_deployment;
 use crate::relay_policy;
 use crate::geoip_country;
 use crate::control_roles;
+use crate::connection_access;
 use std::{
     collections::{HashMap, VecDeque},
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
@@ -731,6 +732,10 @@ impl RendezvousServer {
                     return true;
                 }
                 Some(rendezvous_message::Union::RequestRelay(mut rf)) => {
+                    if !connection_access::permitted(&rf.id, &rf.token).await {
+                        log::warn!("Reject relay connection to {} from {}",rf.id,addr);
+                        return false;
+                    }
                     if MUST_LOGIN.load(Ordering::SeqCst) &&
                         (rf.token.is_empty() || jwt::verify_token(&rf.token).is_err()) {
                         log::warn!("Reject unauthenticated relay request from {}", addr);
@@ -1167,6 +1172,15 @@ impl RendezvousServer {
                 ..Default::default()
             });
             return Ok((msg_out, None));
+        }
+        if !connection_access::permitted(&ph.id, &ph.token).await {
+            log::warn!("Reject connection access request to {} from {}", ph.id, addr);
+            let mut msg_out=RendezvousMessage::new();
+            msg_out.set_punch_hole_response(PunchHoleResponse{
+                other_failure:"Connection is not permitted for this account.".to_owned(),
+                ..Default::default()
+            });
+            return Ok((msg_out,None));
         }
         // Authenticate connection attempts when login is required.
         if MUST_LOGIN.load(Ordering::SeqCst) {

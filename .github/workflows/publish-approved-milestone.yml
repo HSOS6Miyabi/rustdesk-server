@@ -31,12 +31,6 @@ jobs:
             exit 0
           fi
           RELEASE_TAG="v1.1.17-api.21"
-          CURRENT="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" --jq '.object.sha // empty' 2>/dev/null || true)"
-          if [[ -z "$CURRENT" ]]; then
-            gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$RELEASE_TAG" -f "sha=$GITHUB_SHA"
-          elif [[ "$CURRENT" != "$GITHUB_SHA" ]]; then
-            echo "The milestone tag points to a different commit."
-            exit 1
-          fi
+          gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$RELEASE_TAG" -f "sha=$GITHUB_SHA"
           gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/release-server.yml/dispatches" \
             -f "ref=$RELEASE_TAG" -F "inputs[milestone_release]=true"

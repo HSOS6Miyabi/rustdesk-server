@@ -41,6 +41,7 @@ use ipnetwork::Ipv4Network;
 
 use crate::jwt;
 use crate::device_deployment;
+use crate::relay_policy;
 use std::{
     collections::{HashMap, VecDeque},
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
@@ -54,6 +55,7 @@ enum Data {
     Msg(Box<RendezvousMessage>, SocketAddr),
     RelayServers0(String),
     RelayServers(RelayServers),
+    ManagedRelays(relay_policy::RelayPolicy),
 }
 
 const REG_TIMEOUT: i64 = 30_000;
@@ -237,6 +239,8 @@ pub struct RendezvousServer {
     tx: Sender,
     relay_servers: Arc<RelayServers>,
     relay_servers0: Arc<RelayServers>,
+    relay_policy: Arc<relay_policy::RelayPolicy>,
+    default_relay_servers: String,
     rendezvous_servers: Arc<Vec<String>>,
     inner: Arc<Inner>,
     ws_map: Arc<Mutex<HashMap<SocketAddr, Sink>>>,
@@ -289,6 +293,7 @@ impl RendezvousServer {
         };
         // For privacy use per connection key pair
         let (secure_tcp_pk_b, secure_tcp_sk_b) = box_::gen_keypair();
+        let default_relay_servers = get_arg("relay-servers");
         let mut rs = Self {
             tcp_punch: Arc::new(Mutex::new(HashMap::new())),
             webrtc_ice_routes: Arc::new(Mutex::new(HashMap::new())),
@@ -296,6 +301,8 @@ impl RendezvousServer {
             tx: tx.clone(),
             relay_servers: Default::default(),
             relay_servers0: Default::default(),
+            relay_policy: Arc::new(relay_policy::RelayPolicy::default()),
+            default_relay_servers: default_relay_servers.clone(),
             rendezvous_servers: Arc::new(rendezvous_servers),
             inner: Arc::new(Inner {
                 serial,
@@ -312,7 +319,7 @@ impl RendezvousServer {
         log::info!("mask: {:?}", rs.inner.mask);
         log::info!("local-ip: {:?}", rs.inner.local_ip);
         std::env::set_var("PORT_FOR_API", port.to_string());
-        rs.parse_relay_servers(&get_arg("relay-servers"));
+        rs.parse_relay_servers(&default_relay_servers);
         let mut listener = create_tcp_listener(bind_addr, port).await?;
         let mut listener2 = create_tcp_listener(bind_addr, nat_port).await?;
         let mut listener3 = create_tcp_listener(bind_addr, ws_port).await?;
@@ -442,6 +449,8 @@ impl RendezvousServer {
         key: &str,
     ) -> LoopFailure {
         let mut timer_check_relay = interval(Duration::from_millis(CHECK_RELAY_TIMEOUT));
+        let mut timer_relay_settings =
+            interval(Duration::from_secs(relay_policy::refresh_seconds()));
         loop {
             tokio::select! {
                 _ = timer_check_relay.tick() => {
@@ -453,11 +462,39 @@ impl RendezvousServer {
                         });
                     }
                 }
+                _ = timer_relay_settings.tick(), if relay_policy::managed() => {
+                    let tx = self.tx.clone();
+                    tokio::spawn(async move {
+                        match relay_policy::fetch().await {
+                            Ok(Some(settings)) => {
+                                let _ = tx.send(Data::ManagedRelays(settings));
+                            }
+                            Ok(None) => {}
+                            Err(err) => {
+                                log::warn!("Unable to update relay preferences: {}", err);
+                            }
+                        }
+                    });
+                }
                 Some(data) = rx.recv() => {
                     match data {
                         Data::Msg(msg, addr) => { allow_err!(socket.send(msg.as_ref(), addr).await); }
                         Data::RelayServers0(rs) => { self.parse_relay_servers(&rs); }
                         Data::RelayServers(rs) => { self.relay_servers = Arc::new(rs); }
+                        Data::ManagedRelays(settings) => {
+                            if settings.nodes.is_empty() {
+                                self.relay_policy = Arc::new(relay_policy::RelayPolicy::default());
+                                let defaults = self.default_relay_servers.clone();
+                                self.parse_relay_servers(&defaults);
+                            } else {
+                                let addresses = settings.nodes.iter()
+                                    .map(|node| node.address.as_str())
+                                    .collect::<Vec<_>>()
+                                    .join(",");
+                                self.relay_policy = Arc::new(settings);
+                                self.parse_relay_servers(&addresses);
+                            }
+                        }
                     }
                 }
                 res = socket.next() => {
@@ -1412,14 +1449,14 @@ impl RendezvousServer {
         self.relay_servers = self.relay_servers0.clone();
     }
 
-    fn get_relay_server(&self, _pa: IpAddr, _pb: IpAddr) -> String {
-        if self.relay_servers.is_empty() {
-            return "".to_owned();
-        } else if self.relay_servers.len() == 1 {
-            return self.relay_servers[0].clone();
-        }
-        let i = ROTATION_RELAY_SERVER.fetch_add(1, Ordering::SeqCst) % self.relay_servers.len();
-        self.relay_servers[i].clone()
+    fn get_relay_server(&self, pa: IpAddr, pb: IpAddr) -> String {
+        relay_policy::select(
+            &self.relay_policy,
+            &self.relay_servers,
+            pa,
+            pb,
+            &ROTATION_RELAY_SERVER,
+        )
     }
 
     async fn check_cmd(&self, cmd: &str) -> String {

@@ -185,8 +185,11 @@ def main():
                            "DENIED", internal_key="incorrect-test-key")
             require_result(base, "/internal/v1/device/authorize", identity, 200,
                            "NOT_DEPLOYED", internal_key=key)
-            require_result(base, "/api/devices/deploy", identity, 401,
-                           "UNAUTHORIZED", token="invalid-test-token")
+            status, rejected = post_json(
+                base, "/api/devices/deploy", identity, token="invalid-test-token",
+            )
+            if status != 401 or rejected.get("error") != "Unauthorized":
+                raise AssertionError("Deployment endpoint accepted an invalid access token")
             require_result(base, "/api/devices/deploy", identity, 200,
                            "OK", token=token)
             check_saved_deployment(database, device_id, uuid, public_key, owner_id)

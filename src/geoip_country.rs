@@ -9,16 +9,38 @@ use std::{
     net::IpAddr,
     path::Path,
     str::FromStr,
+    sync::Arc,
 };
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub(crate) struct CountryDatabase {
     ipv4: HashMap<(u32, u8), [u8; 2]>,
     ipv6: HashMap<(u128, u8), [u8; 2]>,
+    mmdb: Option<Arc<maxminddb::Reader<Vec<u8>>>>,
+}
+
+impl std::fmt::Debug for CountryDatabase {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CountryDatabase")
+            .field("csv_networks", &(self.ipv4.len() + self.ipv6.len()))
+            .field("mmdb", &self.mmdb.is_some())
+            .finish()
+    }
 }
 
 impl CountryDatabase {
     pub(crate) fn country(&self, ip: IpAddr) -> Option<[u8; 2]> {
+        if let Some(reader) = &self.mmdb {
+            if let Ok(record) = reader.lookup::<maxminddb::geoip2::Country>(ip) {
+                let code = record
+                    .country
+                    .and_then(|country| country.iso_code)
+                    .or_else(|| record.registered_country.and_then(|country| country.iso_code));
+                if let Some(code) = code.and_then(two_letter_code) {
+                    return Some(code);
+                }
+            }
+        }
         match ip {
             IpAddr::V4(ip) => {
                 let numeric = u32::from(ip);
@@ -53,20 +75,48 @@ impl CountryDatabase {
     pub(crate) fn block_count(&self) -> usize {
         self.ipv4.len() + self.ipv6.len()
     }
+
+    pub(crate) fn data_format(&self) -> &'static str {
+        match (self.mmdb.is_some(), self.block_count() > 0) {
+            (true, true) => "MMDB and CSV",
+            (true, false) => "MMDB",
+            (false, _) => "CSV",
+        }
+    }
+}
+
+fn two_letter_code(value: &str) -> Option<[u8; 2]> {
+    let bytes = value.as_bytes();
+    if bytes.len() != 2 || !bytes.iter().all(u8::is_ascii_uppercase) {
+        return None;
+    }
+    Some([bytes[0], bytes[1]])
 }
 
 pub(crate) fn configured() -> bool {
-    env::var("RUSTDESK_GEOIP_CSV_DIR")
-        .map(|dir| !dir.trim().is_empty())
-        .unwrap_or(false)
+    ["RUSTDESK_GEOIP_MMDB_FILE", "RUSTDESK_GEOIP_CSV_DIR"]
+        .iter()
+        .any(|name| env::var(name).map(|value| !value.trim().is_empty()).unwrap_or(false))
 }
 
 pub(crate) fn load_from_environment() -> Result<Option<CountryDatabase>, String> {
-    let dir = match env::var("RUSTDESK_GEOIP_CSV_DIR") {
-        Ok(value) if !value.trim().is_empty() => value,
-        _ => return Ok(None),
+    let mmdb = env::var("RUSTDESK_GEOIP_MMDB_FILE")
+        .ok().filter(|value| !value.trim().is_empty());
+    let csv = env::var("RUSTDESK_GEOIP_CSV_DIR")
+        .ok().filter(|value| !value.trim().is_empty());
+    if mmdb.is_none() && csv.is_none() {
+        return Ok(None);
+    }
+    let mut data = match csv {
+        Some(directory) => load(Path::new(&directory))?,
+        None => CountryDatabase::default(),
     };
-    load(Path::new(&dir)).map(Some)
+    if let Some(file) = mmdb {
+        let reader = maxminddb::Reader::open_readfile(Path::new(&file))
+            .map_err(|error| format!("{file}: {error}"))?;
+        data.mmdb = Some(Arc::new(reader));
+    }
+    Ok(Some(data))
 }
 
 // The country-name columns of MaxMind's CSV can contain commas or quotes.
@@ -225,6 +275,26 @@ mod tests {
         assert_eq!(geo.country("198.51.100.1".parse::<IpAddr>().unwrap()), Some(*b"US"));
         assert_eq!(geo.country("2001:db8:1::1".parse::<IpAddr>().unwrap()), Some(*b"JP"));
         assert_eq!(geo.country("192.0.2.1".parse::<IpAddr>().unwrap()), None);
+    }
+
+    #[test]
+    fn mmdb_file_validation_and_country_code_conversion() {
+        assert_eq!(two_letter_code("JP"), Some(*b"JP"));
+        assert_eq!(two_letter_code("us"), None);
+        assert_eq!(two_letter_code("JPN"), None);
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("not-a-country-database.mmdb");
+        fs::write(&file, b"invalid mmdb").unwrap();
+        assert!(maxminddb::Reader::open_readfile(&file).is_err());
+
+        let csv = CountryDatabase::default();
+        assert_eq!(csv.data_format(), "CSV");
+        let mmdb = load_from_environment_file(&file);
+        assert!(mmdb.is_err());
+    }
+
+    fn load_from_environment_file(file: &Path) -> Result<maxminddb::Reader<Vec<u8>>, String> {
+        maxminddb::Reader::open_readfile(file).map_err(|error| error.to_string())
     }
 
     #[test]

@@ -9,3 +9,4 @@ mod device_deployment;
 mod relay_policy;
 mod geoip_country;
 mod control_roles;
+mod connection_access;

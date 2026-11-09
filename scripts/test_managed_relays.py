@@ -118,6 +118,10 @@ def main():
                             and b_address in console(nat_port, command_b))
                         if APIMock.received == 0:
                             raise AssertionError("hbbs never fetched the relay list from the API")
+                        relay_a.shutdown()
+                        relay_a.server_close()
+                        relays.remove(relay_a)
+                        until(proc, lambda: b_address in console(nat_port, command_a), timeout=20)
                         APIMock.nodes = []
                         until(proc, lambda: fallback_address in console(nat_port, command_a), timeout=25)
                         print("Managed relay preferences, API polling and standard fallback verified.")

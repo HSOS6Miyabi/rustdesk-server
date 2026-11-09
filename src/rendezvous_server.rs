@@ -1450,6 +1450,16 @@ impl RendezvousServer {
     }
 
     fn get_relay_server(&self, pa: IpAddr, pb: IpAddr) -> String {
+        if self.relay_servers.is_empty() && !self.relay_policy.nodes.is_empty() {
+            let fallback = get_servers(&self.default_relay_servers, "relay-servers");
+            return relay_policy::select(
+                &relay_policy::RelayPolicy::default(),
+                &fallback,
+                pa,
+                pb,
+                &ROTATION_RELAY_SERVER,
+            );
+        }
         relay_policy::select(
             &self.relay_policy,
             &self.relay_servers,
@@ -1901,9 +1911,7 @@ async fn check_relay_servers(rs0: Arc<RelayServers>, tx: Sender) {
     join_all(futs).await;
     log::debug!("check_relay_servers");
     let rs = std::mem::take(&mut *rs.lock().await);
-    if !rs.is_empty() {
-        tx.send(Data::RelayServers(rs)).ok();
-    }
+    tx.send(Data::RelayServers(rs)).ok();
 }
 
 // temp solution to solve udp socket failure

@@ -131,9 +131,9 @@ cargo build --release --locked
 
 ## GeoLite2 国家级中继选择
 
-多中继管理可以使用 GeoLite2 Country CSV 判断客户端 IP 的国家，再按 Web 管理界面设置的国家代码选择中继。精确 CIDR 网络规则优先。未提供国家数据库时，保留现有中继选择方式。
+多中继管理可以使用 GeoLite2 Country MMDB 文件或 CSV 数据判断客户端 IP 所属国家，再按 Web 管理界面设置的国家代码选择中继。精确 CIDR 网络规则优先。未提供国家数据库时，保留现有中继选择方式。
 
-GeoLite2 文件由部署者自行获取。配置环境变量 `RUSTDESK_GEOIP_CSV_DIR` 指向文件目录，更新 Country CSV 数据后可以在本地管理端口运行 `reload-geo`，无需重启 hbbs。
+GeoLite2 数据由部署者自行获取。配置环境变量 `RUSTDESK_GEOIP_MMDB_FILE` 指向 MMDB 文件，或使用 `RUSTDESK_GEOIP_CSV_DIR` 指向 CSV 目录。也可以同时配置两种格式，优先查询 MMDB，并用 CSV 补充未识别的地址。更新数据文件后可以在本地管理端口运行 `reload-geo`，无需重启 hbbs。
 
 具体配置见 [环境变量说明](docs/environment-variables.md)。
 

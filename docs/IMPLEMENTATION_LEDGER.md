@@ -1,6 +1,6 @@
 # RustDesk Server 开发实施台账
 
-> **交接入口：[Server 最新开发交接快照](HANDOFF_SNAPSHOT_2026-11-09.md)、[API 与 Server 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)、[22 项逐项记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/TASK_VERIFICATION_RECORD.md)。** Server 已通过 [Rust 编译和实际服务检查 #42666030849](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42666030849) 以及 [AMD64、ARM64 实际 API 联合授权及组合部署 #42666031144](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42666031144)。配套 API 的代码及检查以其 [开发分支](https://github.com/HSOS6Miyabi/rustdesk-api/tree/development/m1-device-management) 和 GitHub Actions 最新运行结果为准。两个仓库的拉取请求继续保持草稿状态，尚未发布新版本。
+> **交接入口：[Server 最新开发交接快照](HANDOFF_SNAPSHOT_2026-11-09.md)、[API 与 Server 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)、[22 项逐项记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/TASK_VERIFICATION_RECORD.md)。** Server 已通过 [Rust 编译和实际服务检查 #42669744309](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42669744309) 以及 [AMD64、ARM64 实际 API 联合授权及组合部署 #42669744598](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42669744598)。配套 API 的代码及检查以其 [开发分支](https://github.com/HSOS6Miyabi/rustdesk-api/tree/development/m1-device-management) 和 GitHub Actions 最新运行结果为准。两个仓库的拉取请求继续保持草稿状态，尚未发布新版本。
 
 本文件继续保留各项服务端功能的原始提交和测试记录，全部任务的当前状态、优先级与发布条件统一从上述总账查阅。
 
@@ -351,3 +351,14 @@ Server 的 `scripts/test_real_api_strict_combination.py` 在临时环境中运�
 | Windows、Linux、macOS 与 Android 模拟器客户端启动 | [API #42666929318](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42666929318)：成功 |
 
 真实多终端的远程操作、账户双重认证、跨地区公网中继、外部 SMTP、生产业务数据恢复，以及目标服务器部署仍按 [T001–T022 逐项任务记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/TASK_VERIFICATION_RECORD.md) 检查。两个 PR 保留草稿状态，待全部发布前检查完成后再合并。
+
+
+## 2026-11-10：撤销设备许可后的连接拒绝
+
+Server 的实际 API 联合测试已增加许可撤销后的连接检查。在严格设备登记与集中连接授权同时启用的情况下，设备撤销许可后，`hbbs` 拒绝向该设备转发新的连接协商与中继请求。配套 API 查询设备批准状态、UUID 和所属账户，设备身份不一致时拒绝连接请求。
+
+- [API Go 综合检查 #42670400984](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42670400984)：通过。
+- [Server Rust 综合检查 #42669744309](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42669744309)：通过。
+- [AMD64、ARM64 联合部署和撤销后连接检查 #42669744598](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42669744598)：通过。
+
+这些自动化测试使用临时账户和本地服务器进程。实际客户端、正式公网中继及生产环境检查仍按 T001–T022 逐项记录执行，未完成的正式环境项目继续保留待检查状态。

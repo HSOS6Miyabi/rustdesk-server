@@ -172,3 +172,10 @@ python3 scripts/test_real_api_strict_combination.py /path/to/rustdesk-api/docker
 测试启动实际 API 与 `hbbs`，创建临时账户并通过真实 HTTP 登录和登出接口验证 JWT、旧令牌撤销后的拒绝、再次登录签发不同令牌、设备访问规则、控制角色、WebRTC SDP/ICE 和 API 中断时的处理。
 
 [AMD64 和 ARM64 联合检查 #42666031144](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42666031144) 已成功。实际终端与公网网络检查按统一任务记录执行。
+
+
+## 设备许可撤销后的连接拒绝
+
+在 Server 的 `scripts/test_real_api_strict_combination.py` 中，同一实际 API 与 `hbbs` 环境会先验证正常连接，然后撤销设备部署许可并再次发起连接和中继请求。后续请求应被拒绝，目标设备也不应收到未经授权的连接消息。
+
+此检查已纳入双架构测试：[Server #42669744598](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42669744598)。配套 API 的严格授权单元测试位于 `service/connection_access_deployment_test.go`，设备心跳测试位于 `http/controller/api/device_policy_heartbeat_test.go`。

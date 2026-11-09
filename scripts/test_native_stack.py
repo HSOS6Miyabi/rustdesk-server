@@ -105,7 +105,10 @@ def main():
         api_work.mkdir()
         server_work.mkdir()
         shutil.copytree(source / "conf", api_work / "conf")
-        shutil.copytree(source / "resources", api_work / "resources")
+        shutil.copytree(
+            source / "resources", api_work / "resources",
+            ignore=shutil.ignore_patterns("node_modules", ".git", "coverage"),
+        )
         (api_work / "data").mkdir()
         (api_work / "runtime").mkdir()
         configuration = api_work / "conf" / "config.yaml"

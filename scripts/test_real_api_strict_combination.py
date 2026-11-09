@@ -48,6 +48,13 @@ def jwt(user_id, secret):
 
 
 def seed_sessions(db_path, jwt_secret):
+    # Both login passwords exist only in the temporary database and in memory.
+    admin_password = secrets.token_urlsafe(17)
+    viewer_password = secrets.token_urlsafe(17)
+
+    def legacy_fixture_hash(value):
+        return hashlib.md5((value + "rustdesk-api").encode()).hexdigest()
+
     with sqlite3.connect(db_path, timeout=15) as db:
         db.execute("PRAGMA busy_timeout = 10000")
         admin = db.execute(
@@ -59,21 +66,51 @@ def seed_sessions(db_path, jwt_secret):
         if admin is None or version is None or version[0] < 282:
             raise AssertionError("API administrator or required database schema is missing")
         admin_id = admin[0]
+        db.execute(
+            "UPDATE users SET password = ? WHERE id = ?",
+            (legacy_fixture_hash(admin_password), admin_id),
+        )
         viewer_id = db.execute(
-            "INSERT INTO users (username, status, is_admin) VALUES (?, 1, 0)",
-            ("integration-viewer",),
+            "INSERT INTO users (username, password, status, is_admin) "
+            "VALUES (?, ?, 1, 0)",
+            ("integration-viewer", legacy_fixture_hash(viewer_password)),
         ).lastrowid
-        admin_token, viewer_token = jwt(admin_id, jwt_secret), jwt(viewer_id, jwt_secret)
         invalid_signature = jwt(viewer_id, secrets.token_urlsafe(32))
-        for user_id, token in (
-            (admin_id, admin_token), (viewer_id, viewer_token),
-            (viewer_id, invalid_signature),
-        ):
-            db.execute(
-                "INSERT INTO user_tokens (user_id, token, expired_at) VALUES (?, ?, ?)",
-                (user_id, token, int(time.time()) + 1800),
-            )
-    return admin_id, viewer_id, admin_token, viewer_token, invalid_signature
+        db.execute(
+            "INSERT INTO user_tokens (user_id, token, expired_at) VALUES (?, ?, ?)",
+            (viewer_id, invalid_signature, int(time.time()) + 1800),
+        )
+    return admin_id, viewer_id, admin_password, viewer_password, invalid_signature
+
+
+def login_api(base, username, password):
+    request = {
+        "username": username, "password": password, "type": "account",
+        "id": "isolated-ci-client", "deviceInfo": {"os": "Linux", "type": "desktop"},
+    }
+    status, result = post_json(base, "/api/login", request)
+    if status != 200 or not isinstance(result, dict):
+        raise AssertionError(f"API login returned HTTP {status}")
+    token = result.get("access_token")
+    if not isinstance(token, str) or len(token.split(".")) != 3:
+        raise AssertionError(f"API did not issue a signed JWT for {username}")
+    return token
+
+
+def check_login_sessions(db_path, issued):
+    with sqlite3.connect(db_path, timeout=15) as db:
+        for username, token in issued:
+            row = db.execute(
+                "SELECT user_id, expired_at FROM user_tokens WHERE token = ?",
+                (token,),
+            ).fetchone()
+            user = db.execute(
+                "SELECT id, password FROM users WHERE username = ?", (username,),
+            ).fetchone()
+            if row is None or user is None or row[0] != user[0] or row[1] <= time.time():
+                raise AssertionError(f"API did not save an active session for {username}")
+            if not user[1].startswith("$2"):
+                raise AssertionError(f"API password hash upgrade did not finish for {username}")
 
 
 def set_viewer_rule(db_path, viewer_id, effect):
@@ -175,9 +212,20 @@ def main():
             streams.append(log)
             wait_for_api(base, api)
             db_path = api_work / "data/rustdeskapi.db"
-            _, viewer_id, admin_token, viewer_token, invalid_token = seed_sessions(
+            _, viewer_id, admin_password, viewer_password, invalid_token = seed_sessions(
                 db_path, jwt_secret,
             )
+            failed_status, failed_login = post_json(base, "/api/login", {
+                "username": "integration-viewer", "password": "invalid-password",
+                "type": "account",
+            })
+            if failed_status == 200 and isinstance(failed_login, dict) and failed_login.get("access_token"):
+                raise AssertionError("API issued a session for the incorrect password")
+            admin_token = login_api(base, "admin", admin_password)
+            viewer_token = login_api(base, "integration-viewer", viewer_password)
+            check_login_sessions(db_path, [
+                ("admin", admin_token), ("integration-viewer", viewer_token),
+            ])
             status, response = post_json(
                 base, "/api/devices/deploy", payload, token=admin_token,
             )
@@ -303,17 +351,13 @@ def main():
                 websocket_request(hbbs_port, 8, punch(invalid_token), denied=True)
                 must_not_forward(receiver)
 
-                with sqlite3.connect(db_path, timeout=15) as db:
-                    db.execute("DELETE FROM user_tokens WHERE token = ?", (admin_token,))
+                status, _ = post_json(base, "/api/logout", {}, token=admin_token)
+                if status != 200:
+                    raise AssertionError("API did not accept an authenticated logout")
                 websocket_request(hbbs_port, 8, punch(admin_token), denied=True)
                 must_not_forward(receiver)
 
-                with sqlite3.connect(db_path, timeout=15) as db:
-                    db.execute(
-                        "INSERT INTO user_tokens (user_id, token, expired_at) "
-                        "SELECT id, ?, ? FROM users WHERE username = 'admin'",
-                        (admin_token, int(time.time()) + 1800),
-                    )
+                admin_token = login_api(base, "admin", admin_password)
                 websocket_request(hbbs_port, 8, punch(admin_token))
                 require_permissions(recv_registered_target(receiver, 9), 8, PERMISSIONS)
 
@@ -329,9 +373,9 @@ def main():
                 must_not_forward(receiver)
 
             print(
-                "Real RustDesk API and hbbs passed strict deployment, JWT signature, "
-                "session revocation, allow/deny rules, control permissions, relay "
-                "requests, WebRTC SDP/ICE signaling, device revocation and API outage."
+                "Real API password login, logout, JWT and hbbs authorization passed; "
+                "strict deployment, access rules, control permissions, relay requests, "
+                "WebRTC SDP/ICE signaling, device revocation and API outage passed."
             )
         except Exception:
             for stream in streams:

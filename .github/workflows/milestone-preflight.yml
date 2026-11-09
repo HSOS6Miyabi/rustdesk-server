@@ -81,6 +81,11 @@ jobs:
           python3 scripts/test_native_stack.py \
             /tmp/rustdesk-api/docker-bin/apimain \
             target/release/hbbs target/release/hbbr
+      - name: Check registered devices against the real API and hbbs
+        run: |
+          python3 -m py_compile scripts/test_real_api_registration.py
+          python3 scripts/test_real_api_registration.py \
+            /tmp/rustdesk-api/docker-bin/apimain target/release/hbbs
       - name: Build combined image without publishing
         run: |
           set -euo pipefail

@@ -7,3 +7,4 @@ mod version;
 pub mod jwt;
 mod device_deployment;
 mod relay_policy;
+mod geoip_country;

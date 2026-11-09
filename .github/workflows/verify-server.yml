@@ -33,3 +33,5 @@ jobs:
         run: python3 scripts/test_runtime.py target/debug/hbbs target/debug/hbbr
       - name: Check managed registration with a running hbbs process
         run: python3 scripts/test_device_deployment.py target/debug/hbbs
+      - name: Check live relay preferences with a running hbbs process
+        run: python3 scripts/test_managed_relays.py target/debug/hbbs

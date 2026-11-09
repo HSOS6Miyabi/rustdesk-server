@@ -39,3 +39,5 @@ jobs:
         run: python3 scripts/test_control_roles.py target/debug/hbbs
       - name: Check optional connection access with a running hbbs process
         run: python3 scripts/test_connection_access.py target/debug/hbbs
+      - name: Check deployment, JWT login, access rules and control roles together
+        run: python3 scripts/test_strict_combination.py target/debug/hbbs

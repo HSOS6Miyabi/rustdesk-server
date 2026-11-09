@@ -357,7 +357,12 @@ def main():
                 websocket_request(hbbs_port, 8, punch(admin_token), denied=True)
                 must_not_forward(receiver)
 
+                previous_token = admin_token
                 admin_token = login_api(base, "admin", admin_password)
+                if admin_token == previous_token:
+                    raise AssertionError("Relogin reused a revoked login token")
+                websocket_request(hbbs_port, 8, punch(previous_token), denied=True)
+                must_not_forward(receiver)
                 websocket_request(hbbs_port, 8, punch(admin_token))
                 require_permissions(recv_registered_target(receiver, 9), 8, PERMISSIONS)
 

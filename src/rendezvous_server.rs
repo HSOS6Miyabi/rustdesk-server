@@ -43,6 +43,7 @@ use crate::jwt;
 use crate::device_deployment;
 use crate::relay_policy;
 use crate::geoip_country;
+use crate::control_roles;
 use std::{
     collections::{HashMap, VecDeque},
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
@@ -747,6 +748,12 @@ impl RendezvousServer {
                         self.tcp_punch.lock().await.insert(try_into_v4(addr), sink);
                     }
                     if let Some(peer) = self.pm.get_in_memory(&rf.id).await {
+                        if let Some(bits) = control_roles::for_device(&rf.id).await {
+                            rf.control_permissions = MessageField::some(ControlPermissions {
+                                permissions: bits,
+                                ..Default::default()
+                            });
+                        }
                         let mut msg_out = RendezvousMessage::new();
                         rf.socket_addr = AddrMangle::encode(addr).into();
                         msg_out.set_request_relay(rf);
@@ -1212,6 +1219,13 @@ impl RendezvousServer {
             )
             .await;
 
+            let control_permissions = match control_roles::for_device(&id).await {
+                Some(bits) => MessageField::some(ControlPermissions {
+                    permissions: bits,
+                    ..Default::default()
+                }),
+                None => MessageField::none(),
+            };
             let mut msg_out = RendezvousMessage::new();
             let peer_is_lan = self.is_lan(peer_addr);
             let is_lan = self.is_lan(addr);
@@ -1242,6 +1256,7 @@ impl RendezvousServer {
                 msg_out.set_fetch_local_addr(FetchLocalAddr {
                     socket_addr,
                     relay_server,
+                    control_permissions,
                     ..Default::default()
                 });
             } else {
@@ -1255,6 +1270,7 @@ impl RendezvousServer {
                     socket_addr,
                     nat_type: ph.nat_type,
                     relay_server,
+                    control_permissions,
                     webrtc_sdp_offer: if ph.webrtc_sdp_offer.len() <= WEBRTC_ICE_MAX_OFFER {
                         ph.webrtc_sdp_offer
                     } else {

@@ -70,6 +70,6 @@ python3 scripts/test_strict_combination.py target/debug/hbbs
 
 ## 五、接手顺序与配置提醒
 
-先读取 [Server 环境变量说明](environment-variables.md)、[部署说明](DEPLOYMENT.md)、[Server 测试说明](TESTING.md) 和配套 [API 交接快照](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/HANDOFF_SNAPSHOT_2026-11-09.md)。首次启用可选严格功能时，确保 API 和 Server 的 `RUSTDESK_API_INTERNAL_KEY` 一致，设置 `RUSTDESK_API_JWT_KEY`、`MUST_LOGIN` 和 `REQUIRE_DEVICE_DEPLOYMENT`，并先创建允许连接的设备和访问规则。初始迁移应使用专门的测试环境。
+先读取 [Server 环境变量说明](environment-variables.md)、[部署说明](../README.md)、[Server 测试说明](TESTING.md) 和配套 [API 交接快照](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/HANDOFF_SNAPSHOT_2026-11-09.md)。首次启用可选严格功能时，确保 API 和 Server 的 `RUSTDESK_API_INTERNAL_KEY` 一致，设置 `RUSTDESK_API_JWT_KEY`、`MUST_LOGIN` 和 `REQUIRE_DEVICE_DEPLOYMENT`，并先创建允许连接的设备和访问规则。初始迁移应使用专门的测试环境。
 
 交接人更新代码后，应重新运行 Server 的 Rust 检查和两个架构的组合预演，将新的两个仓库的实际提交 SHA、测试运行号和真实环境结果同时写入这份快照、[Server 实施台账](IMPLEMENTATION_LEDGER.md) 和配套 [22 项任务记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/TASK_VERIFICATION_RECORD.md)。发布由维护者另行明确批准。

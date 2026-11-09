@@ -1,0 +1,32 @@
+name: Verify Server handoff documentation
+
+on:
+  push:
+    branches:
+      - development/m1-device-management
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - 'scripts/verify_handoff_docs.py'
+      - '.github/workflows/verify-handoff.yml'
+  pull_request:
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - 'scripts/verify_handoff_docs.py'
+      - '.github/workflows/verify-handoff.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-handoff:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Validate current Server handoff and local links
+        run: python3 scripts/verify_handoff_docs.py

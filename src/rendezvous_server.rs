@@ -301,14 +301,15 @@ impl RendezvousServer {
         let geoip_country = match geoip_country::load_from_environment() {
             Ok(Some(database)) => {
                 log::info!(
-                    "Loaded {} GeoLite2 Country IP networks",
+                    "Loaded GeoLite2 Country {} data ({} CSV networks)",
+                    database.data_format(),
                     database.block_count()
                 );
                 database
             }
             Ok(None) => geoip_country::CountryDatabase::default(),
             Err(err) => {
-                log::warn!("Unable to load GeoLite2 Country CSV: {}", err);
+                log::warn!("Unable to load GeoLite2 country data: {}", err);
                 geoip_country::CountryDatabase::default()
             }
         };
@@ -1676,25 +1677,26 @@ impl RendezvousServer {
                         match tokio::task::spawn_blocking(geoip_country::load_from_environment).await {
                             Ok(Ok(Some(database))) => {
                                 log::info!(
-                                    "Reloaded {} GeoLite2 Country IP networks",
+                                    "Reloaded GeoLite2 Country {} data ({} CSV networks)",
+                                    database.data_format(),
                                     database.block_count()
                                 );
                                 tx.send(Data::CountryData(database)).ok();
                             }
                             Ok(Ok(None)) => {
-                                log::warn!("GeoLite2 Country CSV directory is not configured");
+                                log::warn!("GeoLite2 country database is not configured");
                             }
                             Ok(Err(err)) => {
-                                log::warn!("Unable to reload GeoLite2 Country CSV: {}", err);
+                                log::warn!("Unable to reload GeoLite2 country data: {}", err);
                             }
                             Err(err) => {
-                                log::warn!("GeoLite2 Country CSV reload task ended unexpectedly: {}", err);
+                                log::warn!("GeoLite2 country data reload task ended unexpectedly: {}", err);
                             }
                         }
                     });
                     res = "GeoLite2 country data reload requested\n".to_owned();
                 } else {
-                    res = "Set RUSTDESK_GEOIP_CSV_DIR to enable GeoLite2 country lookup\n".to_owned();
+                    res = "Set RUSTDESK_GEOIP_MMDB_FILE or RUSTDESK_GEOIP_CSV_DIR to enable GeoLite2 country lookup\n".to_owned();
                 }
             }
             Some("test-geo" | "tg") => {

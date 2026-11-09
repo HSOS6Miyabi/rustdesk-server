@@ -72,6 +72,28 @@ def until(proc, condition, timeout=25):
     raise TimeoutError("relay selection did not reflect the managed configuration")
 
 
+def write_geo_country_files(directory, source_country):
+    root = Path(directory)
+    (root / "GeoLite2-Country-Locations-en.csv").write_text(
+        "geoname_id,locale_code,continent_code,continent_name,country_iso_code,country_name\n"
+        "1861060,en,AS,Asia,JP,Japan\n"
+        '6252001,en,NA,North America,US,"United States"\n',
+        encoding="utf-8",
+    )
+    mapped_id = "1861060" if source_country == "JP" else "6252001"
+    (root / "GeoLite2-Country-Blocks-IPv4.csv").write_text(
+        "network,geoname_id,registered_country_geoname_id\n"
+        f"192.0.2.0/24,{mapped_id},\n"
+        "198.18.0.0/16,1861060,\n",
+        encoding="utf-8",
+    )
+    (root / "GeoLite2-Country-Blocks-IPv6.csv").write_text(
+        "network,geoname_id,registered_country_geoname_id\n"
+        "2001:db8:1::/48,1861060,\n",
+        encoding="utf-8",
+    )
+
+
 def main():
     if len(sys.argv) != 2:
         raise SystemExit("Usage: test_managed_relays.py /path/to/hbbs")
@@ -86,8 +108,8 @@ def main():
     b_address = f"127.0.0.1:{relay_b.server_address[1]}"
     fallback_address = f"127.0.0.1:{fallback.server_address[1]}"
     APIMock.nodes = [
-        {"address": a_address, "priority": 10, "subnets": ["203.0.113.0/24"]},
-        {"address": b_address, "priority": 20, "subnets": ["198.51.100.0/24"]},
+        {"address": a_address, "priority": 10, "subnets": ["203.0.113.0/24"], "countries": ["JP"]},
+        {"address": b_address, "priority": 20, "subnets": ["198.51.100.0/24"], "countries": ["US"]},
     ]
     APIMock.received = 0
     try:
@@ -103,6 +125,8 @@ def main():
                 "RUSTDESK_API_RELAY_SYNC_SECONDS": "10",
             })
             with tempfile.TemporaryDirectory(prefix="rustdesk-managed-relay-") as directory:
+                write_geo_country_files(directory, source_country="US")
+                env["RUSTDESK_GEOIP_CSV_DIR"] = directory
                 output_path = Path(directory, "hbbs.log")
                 with output_path.open("wb") as output:
                     proc = subprocess.Popen([
@@ -113,18 +137,27 @@ def main():
                         nat_port = port - 1
                         command_a = "test-geo 203.0.113.10 192.0.2.7"
                         command_b = "test-geo 198.51.100.12 192.0.2.7"
+                        country_us = "test-geo 192.0.2.30 192.0.2.31"
+                        country_jp = "test-geo 198.18.1.1 198.18.1.2"
                         until(proc, lambda:
                             a_address in console(nat_port, command_a)
-                            and b_address in console(nat_port, command_b))
+                            and b_address in console(nat_port, command_b)
+                            and b_address in console(nat_port, country_us)
+                            and a_address in console(nat_port, country_jp))
                         if APIMock.received == 0:
                             raise AssertionError("hbbs never fetched the relay list from the API")
+                        write_geo_country_files(directory, source_country="JP")
+                        reply = console(nat_port, "reload-geo")
+                        if "reload requested" not in reply:
+                            raise AssertionError(f"GeoLite2 reload command was rejected: {reply!r}")
+                        until(proc, lambda: a_address in console(nat_port, country_us))
                         relay_a.shutdown()
                         relay_a.server_close()
                         relays.remove(relay_a)
                         until(proc, lambda: b_address in console(nat_port, command_a), timeout=20)
                         APIMock.nodes = []
                         until(proc, lambda: fallback_address in console(nat_port, command_a), timeout=25)
-                        print("Managed relay preferences, API polling and standard fallback verified.")
+                        print("Managed relay preferences, GeoLite2 country lookup, reload, node failover and standard fallback passed.")
                     except Exception:
                         output.flush()
                         print(output_path.read_text(errors="replace")[-5000:], file=sys.stderr)

@@ -148,3 +148,14 @@ python3 scripts/test_real_api_strict_combination.py /path/to/rustdesk-api/docker
 ## 最新配套 API 的复查要求
 
 配套 API 开发分支的设备所属用户转移功能已经更新；在 Server 分支运行 `.github/workflows/milestone-preflight.yml` 时，需要读取 API 当前代码并记录实际 Git 提交。组合测试继续检查真实 API 与 `hbbs`、JWT、设备许可、控制角色和容器重启后的数据库保存结果。
+
+
+## 配套 API 的设备心跳测试
+
+在 API 的 `development/m1-device-management` 分支，执行：
+
+```bash
+go test ./http/controller/api -run '^TestManagedHeartbeatChecksApprovedDeployment$' -count=1
+```
+
+检查已批准、未登记和撤销许可后的心跳策略响应，并保持现有普通设备心跳行为。该测试已包含在本仓库双架构联合工作流运行的 API Go 检查中。

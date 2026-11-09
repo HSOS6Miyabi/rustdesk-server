@@ -322,3 +322,16 @@ Server 的实际 API 与 hbbs 联合测试继续通过 `.github/workflows/milest
 | API SQLite、MySQL、PostgreSQL 数据库检查 | [#42653315887](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42653315887)：成功 |
 
 当前 API 代码参考提交为 `e898985f8b2242e0a4f5e28c1eed2a6ced17b37e`，Server 代码和测试参考提交为 `fcf6bd0481d68ef28974ab8a4cf3015246886339`。目前最近已发布的预发布版本分别为 API `v3.0.0-api.102` 和 Server `v1.1.17-api.20`。本阶段开发工作继续保留在两个草稿拉取请求中。
+
+
+## 2026-11-10：配套 API 严格登记心跳与许可检查
+
+API 代码提交 [3d5f4db1](https://github.com/HSOS6Miyabi/rustdesk-api/commit/3d5f4db168d6182ffcca103eb5bfa37388920df3) 为设备心跳增加部署许可核查。严格登记模式中，设备的登记记录、身份与许可状态需要同时有效，才能收到策略或会话管理指令。已撤销许可的设备得到空响应。
+
+代码：API `http/controller/api/index.go`；测试：`http/controller/api/device_policy_heartbeat_test.go`。
+
+- [API Go 与浏览器综合测试 #42655936250](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42655936250)：成功。
+- [官方 Linux 客户端与实际 API #42655936037](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42655936037)：成功。
+- [数据库迁移及恢复 #42655936179](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42655936179)：成功。
+
+Server 的 `.github/workflows/milestone-preflight.yml` 将配套 API 的 Go 检查与实际 API、`hbbs` 联合测试一起执行，持续核对两个开发分支的兼容情况。真实两终端远程控制仍在 T001、T003、T004、T014 的实际设备测试范围内。

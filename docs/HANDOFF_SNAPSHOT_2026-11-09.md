@@ -8,7 +8,7 @@
 | --- | --- |
 | Server 仓库与分支 | [HSOS6Miyabi/rustdesk-server](https://github.com/HSOS6Miyabi/rustdesk-server) · `development/m1-device-management` |
 | Server 已核实功能提交 | [`eb4b586f9c65a1060dea8ce56b4809dec746c788`](https://github.com/HSOS6Miyabi/rustdesk-server/commit/eb4b586f9c65a1060dea8ce56b4809dec746c788) |
-| 配套 API 已核实功能提交 | [`e898985f8b2242e0a4f5e28c1eed2a6ced17b37e`](https://github.com/HSOS6Miyabi/rustdesk-api/commit/e898985f8b2242e0a4f5e28c1eed2a6ced17b37e) |
+| 配套 API 已核实功能提交 | [`3d5f4db168d6182ffcca103eb5bfa37388920df3`](https://github.com/HSOS6Miyabi/rustdesk-api/commit/3d5f4db168d6182ffcca103eb5bfa37388920df3) |
 | 草稿拉取请求 | [Server #4](https://github.com/HSOS6Miyabi/rustdesk-server/pull/4) 和 [API #6](https://github.com/HSOS6Miyabi/rustdesk-api/pull/6) |
 | 最近已发布的预发布版本 | Server `v1.1.17-api.20`；API `v3.0.0-api.102` |
 | 配套 API 数据库迁移版本 | **282** |
@@ -23,10 +23,10 @@ Server 现有代码支持：`hbbs` 设备登记与连接协商、`hbbr` 中继�
 | --- | --- |
 | Rust 单元与二进制编译，实际 hbbs/hbbr、严格登记、JWT、访问许可和控制角色测试 | [Server #42653555907](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42653555907) |
 | AMD64/ARM64 实际 API、hbbs 联合授权与严格模式、组合镜像、普通进程、容器重新创建及数据保持 | [Server #42653555800](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42653555800) |
-| 配套 API Go/浏览器/WebClient 及自动化检查 | [API #42652681801](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42652681801) |
+| 配套 API Go/浏览器/WebClient 及自动化检查 | [API #42655936250](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42655936250) |
 | 官方 RustDesk 1.5.1 Windows、Linux、macOS 启动及 Android 模拟器 | [API #42646358634](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42646358634) |
-| 官方 Linux 1.5.1 `--deploy`、`--assign` 对实际 API 的部署及直接分配 | [API #42652682083](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42652682083) |
-| SQLite、MySQL 8.4、PostgreSQL 16 模拟升级与恢复 | [API #42652681804](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42652681804) |
+| 官方 Linux 1.5.1 `--deploy`、`--assign` 对实际 API 的部署及直接分配 | [API #42655936037](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42655936037) |
+| SQLite、MySQL 8.4、PostgreSQL 16 模拟升级与恢复 | [API #42655936179](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42655936179) |
 
 最新双架构组合预演 [#42653555800](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42653555800) 实际检出了 API 提交 [`5b96e930`](https://github.com/HSOS6Miyabi/rustdesk-api/commit/5b96e93055c8a5b7b9779e74bcc46adeb1dc1305) 和 Server 的拉取请求合并测试提交 `6be2f147e6fb2673fae93860def5ac8394c6c534`，涵盖 API 功能提交 `e898985f` 与 Server 功能提交 `fcf6bd04`。两种架构均通过设备登记、JWT、访问许可、控制权限、Docker 部署和数据保持检查。
 
@@ -60,7 +60,7 @@ python3 scripts/test_strict_combination.py target/debug/hbbs
 ## 四、仍需完成的服务端真实环境工作
 
 1. **T001、T004**：实际 API 与 `hbbs` 的设备登记、JWT、访问规则及权限信令已通过双架构联合测试；继续使用至少两台正式客户端和 `hbbr` 检查远程控制、直连、中继及 WebRTC 的实际会话效果。
-2. **T003、T014**：用两台真实设备检查十四项控制角色权限、客户端心跳策略的允许、禁止、清除和默认设置效果。
+2. **T003、T014**：API 已检查严格登记设备的心跳许可及撤销后的策略拒绝；继续用两台真实设备检查十四项控制角色权限及客户端策略的实际效果。
 3. **T005、T018**：准备不同地区的真实公网中继节点与获授权 GeoLite2 Country 数据，检查选路、不可用节点的替代选择与 `reload-geo`。
 4. **T006、T008**：在实际部署主机做数据库与 Server 私钥备份恢复、普通进程/Docker 系统重启、端口和反向代理检查。正式 API 数据库应当保留版本 282 的新增表；备份还应覆盖客户端安装文件目录。
 5. **T002、T007、T009、T010、T013、T019、T020、T022**：由 API 交接文档统一安排真实客户端、账户登录、邮箱、管理界面、客户端安装及团队使用测试。
@@ -80,7 +80,7 @@ python3 scripts/test_strict_combination.py target/debug/hbbs
 配套 API 的设备分配命令及管理页面在变更设备所有者时，均同步设备所属用户与部署记录，并撤销与该设备编号或有效 UUID 关联的旧会话。相关 Go 测试及官方 Linux 客户端检查已经完成：
 
 - [API 代码提交 e898985f](https://github.com/HSOS6Miyabi/rustdesk-api/commit/e898985f8b2242e0a4f5e28c1eed2a6ced17b37e)
-- [API 综合测试 #42652681801](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42652681801)
-- [官方 Linux 客户端测试 #42652682083](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42652682083)
+- [API 综合测试 #42655936250](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42655936250)
+- [官方 Linux 客户端测试 #42655936037](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42655936037)
 
 Server 的联合部署工作流持续读取配套 API 开发分支，检查严格登记与访问许可。本项目实际设备端的远程操作仍需使用独立终端测试。

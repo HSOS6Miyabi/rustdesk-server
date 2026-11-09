@@ -278,6 +278,31 @@ mod tests {
     }
 
     #[test]
+    fn reads_maxmind_sample_mmdb_for_ipv4_and_ipv6() {
+        let bytes = include_bytes!("../tests/fixtures/GeoLite2-Country-Test.mmdb");
+        let reader = maxminddb::Reader::from_source(bytes.to_vec()).unwrap();
+        let db = CountryDatabase {
+            mmdb: Some(Arc::new(reader)),
+            ..CountryDatabase::default()
+        };
+        assert_eq!(db.data_format(), "MMDB");
+        assert_eq!(db.country("2.125.160.216".parse().unwrap()), Some(*b"GB"));
+        assert_eq!(db.country("50.114.1.2".parse().unwrap()), Some(*b"US"));
+        assert_eq!(db.country("2001:218::1".parse().unwrap()), Some(*b"JP"));
+        assert_eq!(db.country("2001:220::1".parse().unwrap()), Some(*b"KR"));
+
+        // CSV remains available for IP ranges absent from the MMDB source.
+        let mut combined = db.clone();
+        let mut csv = CountryDatabase::default();
+        let jp_v4 = ("203.0.113.0".parse::<std::net::Ipv4Addr>().unwrap(), 24u8);
+        csv.ipv4.insert((u32::from(jp_v4.0), jp_v4.1), *b"JP");
+        combined.ipv4 = csv.ipv4.clone();
+        assert_eq!(combined.data_format(), "MMDB and CSV");
+        assert_eq!(combined.country("203.0.113.123".parse().unwrap()), Some(*b"JP"));
+        assert_eq!(combined.country("2001:218::1".parse().unwrap()), db.country("2001:218::1".parse().unwrap()));
+    }
+
+    #[test]
     fn mmdb_file_validation_and_country_code_conversion() {
         assert_eq!(two_letter_code("JP"), Some(*b"JP"));
         assert_eq!(two_letter_code("us"), None);

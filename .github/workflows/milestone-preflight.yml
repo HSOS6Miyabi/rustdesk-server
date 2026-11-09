@@ -71,8 +71,8 @@ jobs:
       - name: Compile RustDesk server executables
         run: |
           set -euo pipefail
-          cargo test --locked --lib --tests
-          cargo build --locked --release --bins
+          cargo test --lib --tests
+          cargo build --release --bins
           install -m755 target/release/hbbs docker/rootfs/usr/bin/hbbs
           install -m755 target/release/hbbr docker/rootfs/usr/bin/hbbr
           install -m755 target/release/rustdesk-utils docker/rootfs/usr/bin/rustdesk-utils

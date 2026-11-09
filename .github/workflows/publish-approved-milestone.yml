@@ -1,0 +1,35 @@
+name: Publish approved RustDesk Server milestone
+
+on:
+  push:
+    branches:
+      - forapi
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  dispatch-release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Create release tag and start verified publication
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if ! jq -e '.head_commit.message | contains("release-milestone-server-20261110")' "$GITHUB_EVENT_PATH" >/dev/null; then
+            echo "This commit does not request a milestone release."
+            exit 0
+          fi
+          RELEASE_TAG="v1.1.17-api.21"
+          CURRENT="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" --jq '.object.sha' 2>/dev/null || true)"
+          if [[ -z "$CURRENT" ]]; then
+            gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$RELEASE_TAG" -f "sha=$GITHUB_SHA"
+          elif [[ "$CURRENT" != "$GITHUB_SHA" ]]; then
+            echo "The milestone tag points to a different commit."
+            exit 1
+          fi
+          gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/release-server.yml/dispatches" \
+            -f "ref=$RELEASE_TAG" -F "inputs[milestone_release]=true"

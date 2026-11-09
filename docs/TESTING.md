@@ -6,8 +6,8 @@
 
 ```bash
 git submodule update --init --recursive
-cargo test --locked --lib --tests
-cargo build --locked --bins
+cargo test --lib --tests
+cargo build --bins
 python3 scripts/test_runtime.py target/debug/hbbs target/debug/hbbr
 python3 scripts/test_device_deployment.py target/debug/hbbs
 ```
@@ -38,8 +38,8 @@ API 开发仓库：[rustdesk-api](https://github.com/HSOS6Miyabi/rustdesk-api)�
 ## 多中继配置与网络偏好
 
 ```bash
-cargo test --locked --lib --tests
-cargo build --locked --bins
+cargo test --lib --tests
+cargo build --bins
 python3 scripts/test_managed_relays.py target/debug/hbbs
 ```
 
@@ -57,12 +57,12 @@ python3 scripts/test_managed_relays.py target/debug/hbbs
 执行：
 
 ```bash
-cargo test --locked --lib --tests
-cargo build --locked --bins
+cargo test --lib --tests
+cargo build --bins
 python3 scripts/test_managed_relays.py target/debug/hbbs
 ```
 
-单元测试读取 GeoLite2 Country Locations-en、Blocks-IPv4 和 Blocks-IPv6 的示例数据，验证国家代码、IPv4/IPv6 最长前缀和未知国家处理。
+单元测试读取 GeoLite2 Country Locations-en、Blocks-IPv4、Blocks-IPv6 的示例数据，并使用 `tests/fixtures/GeoLite2-Country-Test.mmdb` 检查 MMDB 的 IPv4/IPv6 国家代码与 CSV 补充查询。示例 MMDB 来源和授权信息见该目录 README。
 
 `test_managed_relays.py` 启动真实 hbbs、模拟 API、中继服务器，依次测试：根据国家代码选择中继、精确 CIDR 优先、运行时 `reload-geo`、节点断开后的替代选择、恢复原有中继地址。
 
@@ -71,8 +71,8 @@ python3 scripts/test_managed_relays.py target/debug/hbbs
 ## 官方会话控制权限
 
 ```bash
-cargo test --locked --lib --tests
-cargo build --locked --bins
+cargo test --lib --tests
+cargo build --bins
 python3 scripts/test_control_roles.py target/debug/hbbs
 ```
 
@@ -85,11 +85,17 @@ python3 scripts/test_control_roles.py target/debug/hbbs
 ## 可选的服务器连接访问许可
 
 ```bash
-cargo test --locked --lib --tests
-cargo build --locked --bins
+cargo test --lib --tests
+cargo build --bins
 python3 scripts/test_connection_access.py target/debug/hbbs
 ```
 
 运行测试将启动 hbbs 和本地模拟 API，验证有效授权令牌、未获授权的客户端、缺少令牌的普通连接、中继连接以及 API 无法访问的情况。无授权的连接请求不会发送给目标设备。
 
 [Server CI 运行记录](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42578682536)：通过。
+
+## 双架构组合镜像预演
+
+`.github/workflows/milestone-preflight.yml` 在 AMD64 和 ARM64 上分别读取 API 与 Server 的开发分支，运行 Go、Rust 和 WebClient 测试，构建本地 API 镜像、Server 程序与组合容器镜像，并用 `scripts/test_container_image.py` 启动容器检查真实服务。镜像仅保留在 GitHub Actions 运行器上，不上传正式仓库，也不创建 Release。
+
+已通过的组合检查：[42585097640](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42585097640)。新增 MMDB 的 Rust 单元和实际服务检查：[42588361437](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42588361437)。

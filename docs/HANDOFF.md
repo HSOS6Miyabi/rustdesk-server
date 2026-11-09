@@ -45,3 +45,24 @@ python3 scripts/test_device_deployment.py target/debug/hbbs
 该脚本会启动临时 HTTP 服务并运行真实 `hbbs`，检查设备许可、冲突、撤销及设备身份信息。
 
 如果严格登记模式已启用，但 API 尚未启用对应设置或暂时无法访问，`hbbs` 将拒绝新的设备登记。未启用严格登记时保留原有设备注册方式。
+
+## 多中继服务器动态管理
+
+本阶段新增 `src/relay_policy.rs`，并在 `src/rendezvous_server.rs` 中增加动态同步与中继选择。配套 API 通过 `relay_nodes` 表管理节点，并提供受保护的 `GET /internal/v1/relay/nodes` 接口。
+
+配置和启用方法见 [环境变量说明](environment-variables.md)。如果不需要集中管理多个中继，保持 `RUSTDESK_API_RELAY_NODES_URL` 未设置即可。
+
+```bash
+cargo test --locked --lib --tests
+cargo build --locked --bins
+python3 scripts/test_runtime.py target/debug/hbbs target/debug/hbbr
+python3 scripts/test_managed_relays.py target/debug/hbbs
+```
+
+最后一个测试会创建临时 HTTP API 和模拟 TCP 中继，验证 hbbs 读取节点、IPv4 网络偏好、节点断开后的替代选择和空配置时恢复原有地址。
+
+配套版本：Server [1dd7c0e](https://github.com/HSOS6Miyabi/rustdesk-server/commit/1dd7c0e85c10bf71f2bcfe86eebead8e09d4c495)，API [fc6d7ba](https://github.com/HSOS6Miyabi/rustdesk-api/commit/fc6d7ba1c0b87e304940b0e38197814cb16512a3)。这两个提交是已通过相应 CI 的版本组合。
+
+相关测试记录：[Server CI](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42565263648)、[API CI](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42565425669)。
+
+**下一阶段：**继续补充 GeoLite2 地理位置数据库、更多客户端策略和设备管理功能，新增模块时更新台账及测试说明。

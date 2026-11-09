@@ -34,3 +34,20 @@ API 开发仓库：[rustdesk-api](https://github.com/HSOS6Miyabi/rustdesk-api)�
 - [Server 现行严格登记测试通过](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42519807127)
 
 正式 Release 仅在里程碑完成后手动启动。
+
+## 多中继配置与网络偏好
+
+```bash
+cargo test --locked --lib --tests
+cargo build --locked --bins
+python3 scripts/test_managed_relays.py target/debug/hbbs
+```
+
+`test_managed_relays.py` 启动一个真实 hbbs 进程、两个临时 TCP 中继节点、一个原有配置的备用节点和模拟 API。脚本检查以下行为：
+
+1. hbbs 从内部 API 取得两个已启用节点；
+2. 双方 IP 地址落入指定网络范围时，优先使用对应中继；
+3. 一个中继断开后，自动选择仍可连接的节点；
+4. API 清空动态节点列表后，恢复启动时配置的中继地址。
+
+[2026-11-09 Server CI 运行记录](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42565263648)显示测试通过。需要对真实多地区客户端的延迟和连接质量进行进一步检查。

@@ -278,3 +278,26 @@ otherwise.
 分开部署时，需要让 `RUSTDESK_API_INTERNAL_URL` 指向 API 的内部服务地址，并限制该接口的网络访问。跨服务器通信建议使用 HTTPS 或可信任的内部网络。
 
 当 `MUST_LOGIN=Y` 时，必须配置 `RUSTDESK_API_JWT_KEY`。不需要限制账户登录时可以继续使用 `MUST_LOGIN=N`。
+
+## 多中继服务器与 API 自动同步
+
+只有希望通过 API Web 管理界面配置多个 hbbr 节点时，才需要启用此功能。单中继部署可以继续使用现有的 `hbbs -r`、`relay-servers` 参数。
+
+| 环境变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `RUSTDESK_API_RELAY_NODES_URL` | 空 | API 内部节点列表地址，例如 `http://127.0.0.1:21114/internal/v1/relay/nodes`。留空时不启用自动同步 |
+| `RUSTDESK_API_INTERNAL_KEY` | 空 | 与 API 配置一致的内部访问密钥 |
+| `RUSTDESK_API_RELAY_SYNC_SECONDS` | `30` | 两次配置同步之间的秒数，支持 10 至 3600 |
+
+例如：
+
+```bash
+export RUSTDESK_API_RELAY_NODES_URL="http://127.0.0.1:21114/internal/v1/relay/nodes"
+export RUSTDESK_API_INTERNAL_KEY="替换为与 API 一致的内部通信密钥"
+export RUSTDESK_API_RELAY_SYNC_SECONDS=30
+hbbs -r relay-backup.example.com:21117
+```
+
+管理员在 API 管理界面中增加中继节点，填写公开的 `host:port` 地址，并可设置 IPv4/IPv6 的 CIDR 网络范围。hbbs 按当前在线节点和连接双方的 IP 网络选择中继。没有匹配范围时，采用原有的轮流选择方法。没有配置托管中继或 API 返回空节点时，使用 `-r` 中指定的原有中继。
+
+内部节点列表应通过本地网络、受信任的私有网络或 HTTPS 访问。如果使用 Docker，API 与 hbbs 必须能够通过配置的地址相互通信；不能无条件使用宿主机的 `127.0.0.1`。

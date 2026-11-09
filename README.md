@@ -120,3 +120,9 @@ cargo build --release --locked
 - [本项目 RustDesk API](https://github.com/HSOS6Miyabi/rustdesk-api)
 
 本仓库遵循源代码中的开源许可证，并保留上游项目的版权声明。
+
+## 多中继服务器
+
+开发分支支持与 API 管理界面配合使用多台 hbbr 中继服务器。管理员可设置每个节点的 IP 网络偏好和优先级；hbbs 定期读取节点列表，检查连通性并选择合适的中继。节点断开后可以改选其他活动节点，动态配置清空时恢复原有中继地址。
+
+只需单台中继时，可以继续使用 `hbbs -r relay.example.com:21117`。多中继的配置方法见 [环境变量说明](docs/environment-variables.md)；自动化测试和维护信息见 [开发实施台账](docs/IMPLEMENTATION_LEDGER.md)。

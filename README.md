@@ -126,3 +126,11 @@ cargo build --release --locked
 开发分支支持与 API 管理界面配合使用多台 hbbr 中继服务器。管理员可设置每个节点的 IP 网络偏好和优先级；hbbs 定期读取节点列表，检查连通性并选择合适的中继。节点断开后可以改选其他活动节点，动态配置清空时恢复原有中继地址。
 
 只需单台中继时，可以继续使用 `hbbs -r relay.example.com:21117`。多中继的配置方法见 [环境变量说明](docs/environment-variables.md)；自动化测试和维护信息见 [开发实施台账](docs/IMPLEMENTATION_LEDGER.md)。
+
+## GeoLite2 国家级中继选择
+
+多中继管理可以使用 GeoLite2 Country CSV 判断客户端 IP 的国家，再按 Web 管理界面设置的国家代码选择中继。精确 CIDR 网络规则优先。未提供国家数据库时，保留现有中继选择方式。
+
+GeoLite2 文件由部署者自行获取。配置环境变量 `RUSTDESK_GEOIP_CSV_DIR` 指向文件目录，更新 Country CSV 数据后可以在本地管理端口运行 `reload-geo`，无需重启 hbbs。
+
+具体配置见 [环境变量说明](docs/environment-variables.md)。

@@ -51,3 +51,19 @@ python3 scripts/test_managed_relays.py target/debug/hbbs
 4. API 清空动态节点列表后，恢复启动时配置的中继地址。
 
 [2026-11-09 Server CI 运行记录](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42565263648)显示测试通过。需要对真实多地区客户端的延迟和连接质量进行进一步检查。
+
+## GeoLite2 国家级中继识别
+
+执行：
+
+```bash
+cargo test --locked --lib --tests
+cargo build --locked --bins
+python3 scripts/test_managed_relays.py target/debug/hbbs
+```
+
+单元测试读取 GeoLite2 Country Locations-en、Blocks-IPv4 和 Blocks-IPv6 的示例数据，验证国家代码、IPv4/IPv6 最长前缀和未知国家处理。
+
+`test_managed_relays.py` 启动真实 hbbs、模拟 API、中继服务器，依次测试：根据国家代码选择中继、精确 CIDR 优先、运行时 `reload-geo`、节点断开后的替代选择、恢复原有中继地址。
+
+[GitHub Actions 测试记录](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42567610418)：通过。

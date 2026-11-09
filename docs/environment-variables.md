@@ -301,3 +301,36 @@ hbbs -r relay-backup.example.com:21117
 管理员在 API 管理界面中增加中继节点，填写公开的 `host:port` 地址，并可设置 IPv4/IPv6 的 CIDR 网络范围。hbbs 按当前在线节点和连接双方的 IP 网络选择中继。没有匹配范围时，采用原有的轮流选择方法。没有配置托管中继或 API 返回空节点时，使用 `-r` 中指定的原有中继。
 
 内部节点列表应通过本地网络、受信任的私有网络或 HTTPS 访问。如果使用 Docker，API 与 hbbs 必须能够通过配置的地址相互通信；不能无条件使用宿主机的 `127.0.0.1`。
+
+## 使用 GeoLite2 Country CSV 识别客户端国家
+
+如果希望按国家自动选择中继，在运行 hbbs 的服务器上下载并解压 MaxMind GeoLite2 Country CSV。
+
+需要以下三个文件放置在同一目录：
+
+```text
+/opt/rustdesk/geoip/
+  GeoLite2-Country-Locations-en.csv
+  GeoLite2-Country-Blocks-IPv4.csv
+  GeoLite2-Country-Blocks-IPv6.csv
+```
+
+启动 hbbs 前设置：
+
+```bash
+export RUSTDESK_GEOIP_CSV_DIR="/opt/rustdesk/geoip"
+```
+
+GeoLite2 文件获取方式和 CSV 字段说明见 [MaxMind 开发者文档](https://dev.maxmind.com/geoip/docs/databases/city-and-country/)。
+
+使用 API 的“中继节点管理”，在国家代码字段填写两位 ISO 国家代码，例如 `JP,US`。hbbs 会根据客户端 IP 的国家归属优先选择指定节点。如果管理员还设置了精确 CIDR 网络范围，精确网络规则将优先使用。
+
+CSV 文件更新后，在 hbbs 的本地管理端口发送 `reload-geo`：
+
+```bash
+printf 'reload-geo' | nc 127.0.0.1 21115
+```
+
+如果使用自定义 ID 服务端端口，请将 21115 改成 `PORT-1`。
+
+没有提供 `RUSTDESK_GEOIP_CSV_DIR` 或 Country CSV 文件时，其他中继设置仍然有效。GeoLite2 数据不包含在仓库和 Docker 镜像中，需要管理员自行准备。在 Docker 中使用时，将目录挂载到容器并设置容器内的路径。

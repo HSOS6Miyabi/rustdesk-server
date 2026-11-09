@@ -66,3 +66,20 @@ python3 scripts/test_managed_relays.py target/debug/hbbs
 相关测试记录：[Server CI](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42565263648)、[API CI](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42565425669)。
 
 **下一阶段：**继续补充 GeoLite2 地理位置数据库、更多客户端策略和设备管理功能，新增模块时更新台账及测试说明。
+
+## GeoLite2 Country CSV 功能接手
+
+- `src/geoip_country.rs`：按 MaxMind 官方 Country CSV 字段读取数据。使用 IPv4/IPv6 网络前缀查找国家代码。
+- `src/relay_policy.rs`：节点国家代码与精确 CIDR 的选择策略，CIDR 规则优先。
+- `src/rendezvous_server.rs`：读取 `RUSTDESK_GEOIP_CSV_DIR`，并支持 `reload-geo` 重新载入。
+- `scripts/test_managed_relays.py`：内置小规模 Country CSV 测试数据，用真实 hbbs 进程验证国家偏好和服务配置变化。
+
+配置示例：
+
+```bash
+export RUSTDESK_GEOIP_CSV_DIR="/opt/rustdesk/geoip"
+export RUSTDESK_API_RELAY_NODES_URL="http://127.0.0.1:21114/internal/v1/relay/nodes"
+export RUSTDESK_API_INTERNAL_KEY="与 API 一致的密钥"
+```
+
+确保配套 API 已更新国家代码字段，关联 API 迁移版本为 277。继续开发时检查 Server 和 API 两个草稿 PR 中的最新 CI。

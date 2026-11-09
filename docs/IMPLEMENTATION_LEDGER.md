@@ -101,3 +101,41 @@ export RUSTDESK_API_RELAY_SYNC_SECONDS=30
 - [中继不可达时的替代选择测试](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42565263648)。
 
 以上工作流均完成且通过，没有创建 Release。后续可进一步增加 GeoLite2 地理位置数据库支持，让管理员无须手动填写地区 IP 网络范围。
+
+## 2026-11-09：GeoLite2 Country CSV 自动识别客户端国家
+
+GeoLite2 国家级数据库为中继选择增加了可选的地理位置规则。管理员在 API 中为中继节点填写两位国家代码。hbbs 从本地 GeoLite2 Country CSV 文件读取 IP 网络和国家对应关系，根据连接双方的 IP 地址选择符合国家偏好的中继。
+
+| 提交 | 修改内容 |
+| --- | --- |
+| [fc0b3ce](https://github.com/HSOS6Miyabi/rustdesk-server/commit/fc0b3ce3831981c47984f10120b1abe70aa7196f) | 读取 GeoLite2 Country Locations-en 与 IPv4、IPv6 Blocks CSV 文件，解析国家代码 |
+| [f3b67c0](https://github.com/HSOS6Miyabi/rustdesk-server/commit/f3b67c0aac07007f7eaf13ae3a28b626968946e6) | 国家代码与精确 CIDR 规则的综合选择，支持 IPv4 和 IPv6 |
+| [ab61a6f](https://github.com/HSOS6Miyabi/rustdesk-server/commit/ab61a6f9f7ef574cdd48930ffaf2865dd14aa26d) | 启动时加载国家数据，本地控制命令 `reload-geo` 重新读取文件 |
+| [9429bda](https://github.com/HSOS6Miyabi/rustdesk-server/commit/9429bda97a5c07b8b2539fc413512f4109928bef) | 实际进程检查国家匹配、数据重新载入与中继断开后的替代选择 |
+
+### 配套 API
+
+- API 通过 `relay_nodes.countries` 保存国家代码，查询接口在原有 `subnets` 外增加 `countries` 数组。
+- 关联 API 功能提交：[e986914](https://github.com/HSOS6Miyabi/rustdesk-api/commit/e986914be9379d5d36d7c77eb5f4532898fc7a1a)。
+- 数据库迁移版本 277：[ec007b5](https://github.com/HSOS6Miyabi/rustdesk-api/commit/ec007b5030664a01f2e0962d05dcaae9333080d4)。
+- 对应 API 文档提交：[14aaf18](https://github.com/HSOS6Miyabi/rustdesk-api/commit/14aaf18c161f36219fe664880ef42a9d982afb6b)。
+
+### 配置
+
+从 [MaxMind 官方文档](https://dev.maxmind.com/geoip/docs/databases/city-and-country/)获取 GeoLite2 Country CSV，解压后将三个文件置于 hbbs 能读取的同一目录：
+
+- `GeoLite2-Country-Locations-en.csv`：GeoNames ID 与 ISO 国家代码。
+- `GeoLite2-Country-Blocks-IPv4.csv`：IPv4 网络与 GeoNames ID。
+- `GeoLite2-Country-Blocks-IPv6.csv`：IPv6 网络与 GeoNames ID。
+
+设置 `RUSTDESK_GEOIP_CSV_DIR` 指向该目录。未设置此变量时，原有 IP 网络和中继轮流选择方式继续有效。更新 Country CSV 文件后，在 hbbs 本地控制端口发送 `reload-geo` 重新读取数据。
+
+本功能不随程序分发 GeoLite2 数据文件。使用者自行取得并按 MaxMind 授权要求更新数据库。
+
+### 测试
+
+- [GeoLite2 CSV 解析和国家级匹配](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42567365799)，通过。
+- [实际 hbbs 的国家级中继选择、配置刷新与节点替代测试](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42567610418)，通过。
+- [API 国家代码管理和内部配置接口](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42567027724)，通过。
+
+具体执行命令与测试内容见 [TESTING.md](TESTING.md)。

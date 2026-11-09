@@ -35,3 +35,5 @@ jobs:
         run: python3 scripts/test_device_deployment.py target/debug/hbbs
       - name: Check live relay preferences with a running hbbs process
         run: python3 scripts/test_managed_relays.py target/debug/hbbs
+      - name: Check native control permissions using a running hbbs process
+        run: python3 scripts/test_control_roles.py target/debug/hbbs

@@ -139,3 +139,42 @@ GeoLite2 国家级数据库为中继选择增加了可选的地理位置规则�
 - [API 国家代码管理和内部配置接口](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42567027724)，通过。
 
 具体执行命令与测试内容见 [TESTING.md](TESTING.md)。
+
+## 2026-11-09：远程控制角色与官方客户端会话权限
+
+本阶段继续面向小型团队增加可选的控制角色。管理员可在 API 网页创建角色，逐项设置 RustDesk 官方协议支持的 14 种权限，按设备、设备所有者、设备组分配。默认未分配角色的设备继续采用原有客户端设置。
+
+### Server 修改
+
+| 提交 | 变更 |
+| --- | --- |
+| [85bdbab](https://github.com/HSOS6Miyabi/rustdesk-server/commit/85bdbab7e14e852115787085b095bb143afa6bbd) | 查询 API 控制角色权限，验证 14 项状态编码，短暂缓存查询结果 |
+| [c97ba9d](https://github.com/HSOS6Miyabi/rustdesk-server/commit/c97ba9de6144eee27e45e8d37d5b3c7c0a98ca94) | 在连接协商的 `PunchHole`、`FetchLocalAddr`、`RequestRelay` 中携带控制权限 |
+| [ee9ff73](https://github.com/HSOS6Miyabi/rustdesk-server/commit/ee9ff73be768677f24ee883e33bca59cfe21c48d) | 运行真实 hbbs，验证普通连接、局域网连接、中继连接的权限消息 |
+
+### 配套 API
+
+- 开发分支：`HSOS6Miyabi/rustdesk-api:development/m1-device-management`。
+- 功能与文档提交：[e850b81](https://github.com/HSOS6Miyabi/rustdesk-api/commit/e850b81dce8f39468cf43cb5d1adb81d79bf65dc)。
+- API 数据库迁移版本：278，增加 `control_roles` 和 `control_role_assignments`。
+- API 草稿 PR：[rustdesk-api #6](https://github.com/HSOS6Miyabi/rustdesk-api/pull/6)。
+
+API 内部接口 `GET /internal/v1/control/permissions?device_id=...` 返回对应设备生效的 `assigned`、`permissions` 和 `source`。Server 使用 `X-RustDesk-Internal-Key` 请求头读取。权限位编码由官方 `ControlPermissions` 定义，每项使用两个二进制位，值 `0` 代表沿用设备自身设置，`1` 代表禁止，`2` 代表允许。
+
+### 环境配置
+
+```bash
+export RUSTDESK_API_CONTROL_ROLE_URL="http://127.0.0.1:21114/internal/v1/control/permissions"
+export RUSTDESK_API_INTERNAL_KEY="与 API 使用相同的内部通信密钥"
+export RUSTDESK_API_CONTROL_CACHE_SECONDS=5
+```
+
+`RUSTDESK_API_CONTROL_ROLE_URL` 不设置时，保持现有会话行为。缓存默认 5 秒，允许设置为 0 至 60 秒。角色在管理界面修改后，后续连接请求将读取新的权限。
+
+### 自动化测试
+
+- [Server Rust 编译与单元测试](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42569499247)：通过。
+- [Server 实际进程协议转发测试](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42569942719)：通过。
+- [配套 API Go 与 Chromium 浏览器测试](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42570243157)：通过。
+
+测试验证实际发送给被控客户端的 Protobuf 控制权限编码。Windows、macOS、Linux 和移动客户端上的各项远程操作行为需在里程碑发布前使用真实客户端检查。两仓库目前保持草稿 PR，未进行正式发布。

@@ -83,3 +83,23 @@ export RUSTDESK_API_INTERNAL_KEY="与 API 一致的密钥"
 ```
 
 确保配套 API 已更新国家代码字段，关联 API 迁移版本为 277。继续开发时检查 Server 和 API 两个草稿 PR 中的最新 CI。
+
+## 远程控制角色
+
+Server 代码分布：
+
+- `src/control_roles.rs`：查询 API 内部权限接口、验证位编码、缓存已查到的角色。
+- `src/rendezvous_server.rs`：把角色权限写入 `PunchHole`、`FetchLocalAddr`、`RequestRelay` 消息。
+- `scripts/test_control_roles.py`：启动 hbbs 和本地模拟 API，验证三种连接消息和未分配角色时的协议行为。
+
+API 提供管理页面、设备／用户／设备组角色分配，以及 `GET /internal/v1/control/permissions?device_id=...`。
+
+```bash
+cargo test --locked --lib --tests
+cargo build --locked --bins
+python3 scripts/test_control_roles.py target/debug/hbbs
+```
+
+对应版本：Server [ee9ff73](https://github.com/HSOS6Miyabi/rustdesk-server/commit/ee9ff73be768677f24ee883e33bca59cfe21c48d)，API [e850b81](https://github.com/HSOS6Miyabi/rustdesk-api/commit/e850b81dce8f39468cf43cb5d1adb81d79bf65dc)。当前均已通过 CI。
+
+使用本功能时需要配置 `RUSTDESK_API_CONTROL_ROLE_URL` 和内部通信密钥，具体见 [环境变量说明](environment-variables.md)。尚未分配控制角色的设备继续使用原有设置。

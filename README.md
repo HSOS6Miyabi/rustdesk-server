@@ -134,3 +134,9 @@ cargo build --release --locked
 GeoLite2 文件由部署者自行获取。配置环境变量 `RUSTDESK_GEOIP_CSV_DIR` 指向文件目录，更新 Country CSV 数据后可以在本地管理端口运行 `reload-geo`，无需重启 hbbs。
 
 具体配置见 [环境变量说明](docs/environment-variables.md)。
+
+## 远程控制角色
+
+本开发分支支持通过配套 API 为设备、用户或设备组指定远程控制角色。管理员可以管理键盘、剪贴板、文件传输、摄像头、远程终端、录制、USB 等 14 项权限。
+
+设置 `RUSTDESK_API_CONTROL_ROLE_URL` 和 `RUSTDESK_API_INTERNAL_KEY` 后，hbbs 会在连接协商时把权限传给官方客户端。未配置控制角色时保留原有功能。详情见 [环境变量说明](docs/environment-variables.md) 和 [实施台账](docs/IMPLEMENTATION_LEDGER.md)。

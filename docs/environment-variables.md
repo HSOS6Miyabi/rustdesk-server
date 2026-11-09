@@ -334,3 +334,25 @@ printf 'reload-geo' | nc 127.0.0.1 21115
 如果使用自定义 ID 服务端端口，请将 21115 改成 `PORT-1`。
 
 没有提供 `RUSTDESK_GEOIP_CSV_DIR` 或 Country CSV 文件时，其他中继设置仍然有效。GeoLite2 数据不包含在仓库和 Docker 镜像中，需要管理员自行准备。在 Docker 中使用时，将目录挂载到容器并设置容器内的路径。
+
+## 从 API 获取远程控制角色
+
+管理员可在 API 网页为设备、用户、设备组分配远程控制角色。要让 hbbs 在连接时向官方 RustDesk 客户端发送这些权限，设置以下变量：
+
+| 环境变量 | 默认值 | 作用 |
+| --- | --- | --- |
+| `RUSTDESK_API_CONTROL_ROLE_URL` | 空 | 内部控制权限接口地址，例如 `http://127.0.0.1:21114/internal/v1/control/permissions`，不配置时保持原有权限 |
+| `RUSTDESK_API_INTERNAL_KEY` | 空 | 与 API 配置一致的内部通信密钥 |
+| `RUSTDESK_API_CONTROL_CACHE_SECONDS` | `5` | 按设备缓存权限结果的时间，允许 0 至 60 秒 |
+
+示例：
+
+```bash
+export RUSTDESK_API_CONTROL_ROLE_URL="http://127.0.0.1:21114/internal/v1/control/permissions"
+export RUSTDESK_API_INTERNAL_KEY="替换为与 API 一致的内部通信密钥"
+export RUSTDESK_API_CONTROL_CACHE_SECONDS=5
+```
+
+当管理员在 API 中为设备分配角色后，hbbs 会在下一次连接协商时向被控客户端传送生效的 `ControlPermissions`。所有权限状态均按官方协议执行：`0` 沿用设备设置，`1` 禁止，`2` 允许。未分配角色时，客户端继续使用自己的权限设置。
+
+API 与 hbbs 分别部署时，要把内部接口地址设置为 hbbs 实际能够访问的地址。Docker 容器中的 `127.0.0.1` 指向该容器自身，跨容器部署需要使用实际的内部服务名称或 IP 地址。

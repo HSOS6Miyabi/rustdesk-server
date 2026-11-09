@@ -67,3 +67,17 @@ python3 scripts/test_managed_relays.py target/debug/hbbs
 `test_managed_relays.py` 启动真实 hbbs、模拟 API、中继服务器，依次测试：根据国家代码选择中继、精确 CIDR 优先、运行时 `reload-geo`、节点断开后的替代选择、恢复原有中继地址。
 
 [GitHub Actions 测试记录](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42567610418)：通过。
+
+## 官方会话控制权限
+
+```bash
+cargo test --locked --lib --tests
+cargo build --locked --bins
+python3 scripts/test_control_roles.py target/debug/hbbs
+```
+
+`test_control_roles.py` 会启动真实 hbbs 和临时 HTTP 服务，建立 UDP、TCP、WebSocket 连接，验证 `PunchHole.control_permissions`、`FetchLocalAddr.control_permissions`、`RequestRelay.control_permissions` 的 Protobuf 编码。
+
+测试还检查未分配角色时保留原有协议消息。配套 API 需要执行 `go test ./service -run TestControl -count=1` 及 `go test ./http/controller/api -run TestInternalControl -count=1`。
+
+[本阶段 Server CI](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42569942719)已通过。

@@ -25,7 +25,10 @@ from test_device_deployment import register_device, wait_for_port
 from test_native_stack import available_tcp_port, start_process, stop_process
 from test_real_api_registration import post_json, wait_for_api
 from test_runtime import find_ports
-from test_webrtc_rendezvous import integer_field, raw_field, text_field
+from test_webrtc_rendezvous import (
+    integer_field, parse_fields, raw_field, send_framed, text_field,
+    ws_recv_binary, ws_send_binary, ws_upgrade,
+)
 
 
 DEVICE = "strict-real-device-001"
@@ -234,6 +237,53 @@ def main():
                 websocket_request(hbbs_port, 18, relay(admin_token))
                 require_permissions(recv_registered_target(receiver, 18), 9, PERMISSIONS)
 
+                offer = "webrtc://strict-real-api-offer"
+                answer = "webrtc://strict-real-api-answer"
+                with ws_upgrade(hbbs_port + 2) as caller:
+                    ws_send_binary(
+                        caller,
+                        raw_field(8, punch(admin_token) + text_field(12, offer)),
+                    )
+                    forwarded = recv_registered_target(receiver, 9)
+                    require_permissions(forwarded, 8, PERMISSIONS)
+                    if forwarded.get(10, [None])[0] != offer.encode():
+                        raise AssertionError("WebRTC SDP offer was changed by strict authorization")
+                    return_addr = forwarded.get(1, [None])[0]
+                    if not return_addr:
+                        raise AssertionError("WebRTC offer did not carry its signaling address")
+                    with socket.create_connection(("127.0.0.1", hbbs_port), timeout=6) as session:
+                        session.settimeout(6)
+                        response = (
+                            raw_field(1, return_addr) +
+                            text_field(2, DEVICE) +
+                            text_field(5, "1.5.1") +
+                            text_field(8, answer)
+                        )
+                        send_framed(session, raw_field(10, response))
+                    reply = parse_fields(ws_recv_binary(caller))
+                    if 11 not in reply:
+                        raise AssertionError("WebRTC caller did not receive SDP answer")
+                    reported = parse_fields(reply[11][0])
+                    if reported.get(12, [None])[0] != answer.encode():
+                        raise AssertionError("WebRTC SDP answer was changed")
+                    session_key = "sha-256 strict-real-api-session"
+                    candidate = (
+                        text_field(1, DEVICE) +
+                        text_field(3, session_key) +
+                        text_field(4, '{"candidate":"candidate:1 1 udp 1 192.0.2.3 1000 typ host"}')
+                    )
+                    ws_send_binary(caller, raw_field(29, candidate))
+                    ice_message = recv_registered_target(receiver, 29)
+                    if ice_message.get(3, [None])[0] != session_key.encode():
+                        raise AssertionError("WebRTC ICE candidate did not reach the target")
+
+                websocket_request(
+                    hbbs_port, 8,
+                    punch(invalid_token) + text_field(12, "webrtc://untrusted-offer"),
+                    denied=True,
+                )
+                must_not_forward(receiver)
+
                 websocket_request(hbbs_port, 8, punch(viewer_token), denied=True)
                 must_not_forward(receiver)
 
@@ -281,7 +331,7 @@ def main():
             print(
                 "Real RustDesk API and hbbs passed strict deployment, JWT signature, "
                 "session revocation, allow/deny rules, control permissions, relay "
-                "requests, device revocation and API outage."
+                "requests, WebRTC SDP/ICE signaling, device revocation and API outage."
             )
         except Exception:
             for stream in streams:

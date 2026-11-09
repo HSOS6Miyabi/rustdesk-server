@@ -232,10 +232,12 @@ def main():
             for name in ("api", "hbbs"):
                 logfile = root / f"{name}.log"
                 if logfile.is_file():
-                    print(
-                        f"\n{name} output:\n{logfile.read_text(errors='replace')[-3500:]}",
-                        file=sys.stderr,
+                    output = logfile.read_text(errors="replace")
+                    filtered = "\n".join(
+                        line for line in output.splitlines()
+                        if "Admin Password Is:" not in line
                     )
+                    print(f"\n{name} output:\n{filtered[-3500:]}", file=sys.stderr)
             raise
         finally:
             for process in processes.values():

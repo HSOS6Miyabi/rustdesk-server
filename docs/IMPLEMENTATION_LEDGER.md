@@ -293,3 +293,17 @@ Server 的 `.github/workflows/milestone-preflight.yml` 在运行时从配套 API
 | 官方 Linux 1.5.1 与实际 API 部署及直接分配 | [API #42646358750](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42646358750)：成功 |
 
 相关流程位于 `.github/workflows/milestone-preflight.yml`；执行命令见 [Server 测试说明](TESTING.md)。实际双终端远程会话、公网与跨地区中继、正式 GeoLite2 数据及主机部署仍按统一 T001–T022 清单执行。发布工作流保持人工明确批准的要求。
+
+
+## 2026-11-10：设备转移后的登录会话管理
+
+配套 API 的 `--assign` 与管理页面设备所有者转移均使用同一设备会话撤销方法。设备所属账户、部署许可和原设备登录会话随所有者变更进行更新；其他设备的有效会话继续保留。
+
+| 位置 | 说明 |
+| --- | --- |
+| 配套 API 代码 | [e898985f](https://github.com/HSOS6Miyabi/rustdesk-api/commit/e898985f8b2242e0a4f5e28c1eed2a6ced17b37e) |
+| Go 与浏览器测试 | [API #42652681801](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42652681801)：成功 |
+| 官方 Linux 客户端与实际 API | [API #42652682083](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42652682083)：成功 |
+| SQLite、MySQL、PostgreSQL | [API #42652681804](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42652681804)：成功 |
+
+Server 的实际 API 与 hbbs 联合测试继续通过 `.github/workflows/milestone-preflight.yml` 执行，检验设备登记、JWT、访问许可、控制角色和容器数据保持。两个开发拉取请求保留草稿状态。

@@ -159,10 +159,12 @@ def main():
             for name in ("api", "hbbs", "hbbr"):
                 path = work / f"{name}.log"
                 if path.exists():
-                    print(
-                        f"\n{name} output:\n{path.read_text(errors='replace')[-3500:]}",
-                        file=sys.stderr,
+                    output = path.read_text(errors="replace")
+                    filtered = "\n".join(
+                        line for line in output.splitlines()
+                        if "Admin Password Is:" not in line
                     )
+                    print(f"\n{name} output:\n{filtered[-3500:]}", file=sys.stderr)
             raise
         finally:
             for process in processes.values():

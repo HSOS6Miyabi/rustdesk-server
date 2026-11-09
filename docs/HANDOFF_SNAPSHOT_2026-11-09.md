@@ -10,7 +10,7 @@
 | Server 已核实功能提交 | [`eb4b586f9c65a1060dea8ce56b4809dec746c788`](https://github.com/HSOS6Miyabi/rustdesk-server/commit/eb4b586f9c65a1060dea8ce56b4809dec746c788) |
 | 配套 API 已核实功能提交 | [`e898985f8b2242e0a4f5e28c1eed2a6ced17b37e`](https://github.com/HSOS6Miyabi/rustdesk-api/commit/e898985f8b2242e0a4f5e28c1eed2a6ced17b37e) |
 | 草稿拉取请求 | [Server #4](https://github.com/HSOS6Miyabi/rustdesk-server/pull/4) 和 [API #6](https://github.com/HSOS6Miyabi/rustdesk-api/pull/6) |
-| 原有正式发行 | Server `v1.1.17-api.9`；API `v3.0.0-api.96` |
+| 最近已发布的预发布版本 | Server `v1.1.17-api.20`；API `v3.0.0-api.102` |
 | 配套 API 数据库迁移版本 | **282** |
 
 两个 PR 均保持 Draft。开发阶段不合并默认分支、不生成正式 Release、不更新正式 Docker 镜像。维护者完成里程碑审核并明确批准前，继续运行测试和维护开发文档。
@@ -21,14 +21,14 @@ Server 现有代码支持：`hbbs` 设备登记与连接协商、`hbbr` 中继�
 
 | 测试范围 | 已成功运行 |
 | --- | --- |
-| Rust 单元与二进制编译，实际 hbbs/hbbr、严格登记、JWT、访问许可和控制角色测试 | [Server #42647450900](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42647450900) |
-| AMD64/ARM64 实际 API、hbbs 联合授权与严格模式、组合镜像、普通进程、容器重新创建及数据保持 | [Server #42647450607](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42647450607) |
+| Rust 单元与二进制编译，实际 hbbs/hbbr、严格登记、JWT、访问许可和控制角色测试 | [Server #42653555907](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42653555907) |
+| AMD64/ARM64 实际 API、hbbs 联合授权与严格模式、组合镜像、普通进程、容器重新创建及数据保持 | [Server #42653555800](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42653555800) |
 | 配套 API Go/浏览器/WebClient 及自动化检查 | [API #42652681801](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42652681801) |
 | 官方 RustDesk 1.5.1 Windows、Linux、macOS 启动及 Android 模拟器 | [API #42646358634](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42646358634) |
 | 官方 Linux 1.5.1 `--deploy`、`--assign` 对实际 API 的部署及直接分配 | [API #42652682083](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42652682083) |
 | SQLite、MySQL 8.4、PostgreSQL 16 模拟升级与恢复 | [API #42652681804](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42652681804) |
 
-组合检查 #42634291214 当时检出的 API 提交为 [`1c896cd8facbc0f73270a3cefe03923bda3b5a05`](https://github.com/HSOS6Miyabi/rustdesk-api/commit/1c896cd8facbc0f73270a3cefe03923bda3b5a05)，Server PR 合并测试提交为 `019ce9ea88f07aa7af1a41383a8fadfa0c9137ed`（包含 Server 功能提交 `66a20931`）。最新双架构组合预演 [#42647450607](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42647450607) 已读取配套 API 功能提交 `dc0a9983`，同时运行实际 API 与 hbbs 的设备登记及严格访问许可测试，完成 Docker 部署和数据保持检查。后续修改仍需使用最新两个开发分支复查。
+最新双架构组合预演 [#42653555800](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42653555800) 实际检出了 API 提交 [`5b96e930`](https://github.com/HSOS6Miyabi/rustdesk-api/commit/5b96e93055c8a5b7b9779e74bcc46adeb1dc1305) 和 Server 的拉取请求合并测试提交 `6be2f147e6fb2673fae93860def5ac8394c6c534`，涵盖 API 功能提交 `e898985f` 与 Server 功能提交 `fcf6bd04`。两种架构均通过设备登记、JWT、访问许可、控制权限、Docker 部署和数据保持检查。
 
 ## 三、主要文件与对应测试
 

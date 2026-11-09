@@ -142,7 +142,7 @@ python3 scripts/test_real_api_strict_combination.py /path/to/rustdesk-api/docker
 
 第一项检查实际 API 对设备部署的响应、重复登记、冲突、撤销及 API 中断；第二项在同一实际 API 与 hbbs 中检查 JWT、登录令牌、访问许可、控制角色与中继信令。两项已经纳入 `.github/workflows/milestone-preflight.yml`，并在 AMD64、ARM64 上通过。
 
-[两架构联合测试 #42647450607](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42647450607) 同时完成普通进程、组合 Docker 容器、服务通信、重启及数据保持检查。正式多设备和公网测试仍需配置实际终端及网络环境。
+[两架构联合测试 #42653555800](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42653555800) 同时完成普通进程、组合 Docker 容器、服务通信、重启及数据保持检查。正式多设备和公网测试仍需配置实际终端及网络环境。
 
 
 ## 最新配套 API 的复查要求

@@ -1,6 +1,6 @@
 # RustDesk Server 开发实施台账
 
-> **交接入口：[Server 最新开发交接快照](HANDOFF_SNAPSHOT_2026-11-09.md)、[API 与 Server 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)、[22 项逐项记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/TASK_VERIFICATION_RECORD.md)。** Server 已通过 [Rust 编译和实际服务检查 #42647450900](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42647450900) 以及 [AMD64、ARM64 实际 API 联合授权及组合部署 #42647450607](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42647450607)。配套 API 的代码及检查以其 [开发分支](https://github.com/HSOS6Miyabi/rustdesk-api/tree/development/m1-device-management) 和 GitHub Actions 最新运行结果为准。两个仓库的拉取请求继续保持草稿状态，尚未发布新版本。
+> **交接入口：[Server 最新开发交接快照](HANDOFF_SNAPSHOT_2026-11-09.md)、[API 与 Server 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)、[22 项逐项记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/TASK_VERIFICATION_RECORD.md)。** Server 已通过 [Rust 编译和实际服务检查 #42653555907](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42653555907) 以及 [AMD64、ARM64 实际 API 联合授权及组合部署 #42653555800](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42653555800)。配套 API 的代码及检查以其 [开发分支](https://github.com/HSOS6Miyabi/rustdesk-api/tree/development/m1-device-management) 和 GitHub Actions 最新运行结果为准。两个仓库的拉取请求继续保持草稿状态，尚未发布新版本。
 
 本文件继续保留各项服务端功能的原始提交和测试记录，全部任务的当前状态、优先级与发布条件统一从上述总账查阅。
 
@@ -307,3 +307,18 @@ Server 的 `.github/workflows/milestone-preflight.yml` 在运行时从配套 API
 | SQLite、MySQL、PostgreSQL | [API #42652681804](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42652681804)：成功 |
 
 Server 的实际 API 与 hbbs 联合测试继续通过 `.github/workflows/milestone-preflight.yml` 执行，检验设备登记、JWT、访问许可、控制角色和容器数据保持。两个开发拉取请求保留草稿状态。
+
+
+## 2026-11-10：当前配套 API 与 Server 双架构验证
+
+使用 API 提交 [5b96e930](https://github.com/HSOS6Miyabi/rustdesk-api/commit/5b96e93055c8a5b7b9779e74bcc46adeb1dc1305) 和 Server 开发分支进行组合检查。对应 API 代码已包含设备所有者转移与会话撤销功能，数据库迁移版本维持 282。
+
+| 验证项目 | GitHub Actions 结果 |
+| --- | --- |
+| Server Rust 编译、单元和协议测试 | [#42653555907](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42653555907)：成功 |
+| AMD64 与 ARM64 的实际 API、hbbs、hbbr、Docker、设备权限及数据保存 | [#42653555800](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42653555800)：成功 |
+| API Go 综合、管理页面和 WebClient | [#42653315805](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42653315805)：成功 |
+| API 官方 Linux 客户端部署与分配 | [#42653315702](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42653315702)：成功 |
+| API SQLite、MySQL、PostgreSQL 数据库检查 | [#42653315887](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42653315887)：成功 |
+
+当前 API 代码参考提交为 `e898985f8b2242e0a4f5e28c1eed2a6ced17b37e`，Server 代码和测试参考提交为 `fcf6bd0481d68ef28974ab8a4cf3015246886339`。目前最近已发布的预发布版本分别为 API `v3.0.0-api.102` 和 Server `v1.1.17-api.20`。本阶段开发工作继续保留在两个草稿拉取请求中。

@@ -178,3 +178,45 @@ export RUSTDESK_API_CONTROL_CACHE_SECONDS=5
 - [配套 API Go 与 Chromium 浏览器测试](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42570243157)：通过。
 
 测试验证实际发送给被控客户端的 Protobuf 控制权限编码。Windows、macOS、Linux 和移动客户端上的各项远程操作行为需在里程碑发布前使用真实客户端检查。两仓库目前保持草稿 PR，未进行正式发布。
+
+## 2026-11-09：可选的服务器连接访问规则
+
+本功能与 API 的“连接访问规则”配合。管理员可以为某个已登录用户、用户组、设备或设备组配置远程访问许可。只有在配置 `RUSTDESK_API_CONNECTION_ACCESS_URL` 后，hbbs 才会对普通连接及中继请求执行授权检查。
+
+### 代码提交
+
+| 提交 | 修改内容 |
+| --- | --- |
+| [8aff47f](https://github.com/HSOS6Miyabi/rustdesk-server/commit/8aff47fbf25227078821ff2058cdf161b30368a1) | 增加按设备和登录令牌查询 API 授权的模块 |
+| [3ceef25](https://github.com/HSOS6Miyabi/rustdesk-server/commit/3ceef2570694ca8d2e78467d0147b375a3647dab) | 对 `PunchHoleRequest`、`RequestRelay` 进行可选授权检查 |
+| [0fa1e56](https://github.com/HSOS6Miyabi/rustdesk-server/commit/0fa1e56e873f000bf13e88b9a31dfaab37c17a50) | 真实 hbbs 进程、模拟内部 API 和普通/中继连接测试 |
+| [4ba02a9](https://github.com/HSOS6Miyabi/rustdesk-server/commit/4ba02a96a0b4eca0aab7bd77ed5c4bafe6d2d0b7) | 使用官方协议消息检查被拒绝的连接及完整运行测试 |
+
+### 配套 API
+
+- API 草稿 PR：[rustdesk-api #6](https://github.com/HSOS6Miyabi/rustdesk-api/pull/6)。
+- API 授权规则接口与模型：[146ab63](https://github.com/HSOS6Miyabi/rustdesk-api/commit/146ab634d546185ad6e1ee91343c2188ce1bddee)。
+- API 数据库迁移：280，新增 `access_rules`。
+- API 内部接口：`POST /internal/v1/connection/authorize`。
+- API 代码及运行记录可在 [API 实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md) 查看。
+
+### 配置和工作方式
+
+默认未启用严格连接许可；普通部署仍按原有方式协商远程连接。启用时设置：
+
+```bash
+export RUSTDESK_API_CONNECTION_ACCESS_URL="http://127.0.0.1:21114/internal/v1/connection/authorize"
+export RUSTDESK_API_INTERNAL_KEY="与 API 相同的内部通信密钥"
+```
+
+启用后，新的普通连接和中继请求通过客户端账户令牌验证，并按 API 中的规则判断。目标设备须在 API 中登记。设备所有者可访问自己的设备，其他账户需要与至少一条允许规则匹配；匹配禁止规则时拒绝访问。
+
+API 无法访问、令牌失效或连接不符合规则时，严格模式会拒绝新的连接。此功能影响 hbbs 协商的连接，不改变客户端直连设备 IP 的处理方式。
+
+### 测试
+
+- [Server Rust 编译及严格模式协议测试](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42578682536)：通过。
+- [API 规则验证和 SQLite 测试](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42577911849)：通过。
+- [API 管理控制台浏览器测试](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42578812266)：通过。
+
+真实客户端的多平台登录、直接连接与严格模式兼容性仍需在里程碑发布前检查。

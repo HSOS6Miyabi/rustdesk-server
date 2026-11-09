@@ -140,3 +140,7 @@ GeoLite2 文件由部署者自行获取。配置环境变量 `RUSTDESK_GEOIP_CSV
 本开发分支支持通过配套 API 为设备、用户或设备组指定远程控制角色。管理员可以管理键盘、剪贴板、文件传输、摄像头、远程终端、录制、USB 等 14 项权限。
 
 设置 `RUSTDESK_API_CONTROL_ROLE_URL` 和 `RUSTDESK_API_INTERNAL_KEY` 后，hbbs 会在连接协商时把权限传给官方客户端。未配置控制角色时保留原有功能。详情见 [环境变量说明](docs/environment-variables.md) 和 [实施台账](docs/IMPLEMENTATION_LEDGER.md)。
+
+## 可选的服务器连接访问规则
+
+本开发分支可以从配套 API 检查远程连接请求，允许管理员指定哪些用户和用户组可以访问哪些设备。启用后，新的普通连接和中继连接都需要通过账户登录和规则检查。默认不启用，普通服务器使用方式保持不变。详情见 [环境变量说明](docs/environment-variables.md)。

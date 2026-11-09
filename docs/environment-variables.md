@@ -356,3 +356,25 @@ export RUSTDESK_API_CONTROL_CACHE_SECONDS=5
 当管理员在 API 中为设备分配角色后，hbbs 会在下一次连接协商时向被控客户端传送生效的 `ControlPermissions`。所有权限状态均按官方协议执行：`0` 沿用设备设置，`1` 禁止，`2` 允许。未分配角色时，客户端继续使用自己的权限设置。
 
 API 与 hbbs 分别部署时，要把内部接口地址设置为 hbbs 实际能够访问的地址。Docker 容器中的 `127.0.0.1` 指向该容器自身，跨容器部署需要使用实际的内部服务名称或 IP 地址。
+
+## 按用户和群组管理远程连接许可
+
+需要集中控制不同成员可访问的远程设备时，可以启用严格连接许可。管理员先在 API 的“连接访问规则”页面创建需要的允许规则，再设置以下环境变量。
+
+| 环境变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `RUSTDESK_API_CONNECTION_ACCESS_URL` | 空 | 内部连接授权地址，例如 `http://127.0.0.1:21114/internal/v1/connection/authorize`，留空不启用 |
+| `RUSTDESK_API_INTERNAL_KEY` | 空 | 与 API 使用相同的内部通信密钥 |
+
+示例：
+
+```bash
+export RUSTDESK_API_CONNECTION_ACCESS_URL="http://127.0.0.1:21114/internal/v1/connection/authorize"
+export RUSTDESK_API_INTERNAL_KEY="替换为与 API 一致的内部通信密钥"
+```
+
+启用后，连接请求中的账户令牌与目标设备 ID 会由 hbbs 发送给 API 判断。设备所有者始终可连接已登记的自己设备。其他用户必须符合管理员配置的允许规则，且不能匹配禁止规则。
+
+严格模式需要正常可用的 API。API 暂时无法访问时，新的连接请求会被拒绝。只有通过 hbbs 协商的连接会执行这些规则，直接通过 IP 地址连接目标设备的行为仍由客户端处理。
+
+在 Docker 部署时，需要使用 hbbs 容器能够访问到的 API 地址；跨机器时建议通过受保护的内网或 HTTPS 连接。未配置 `RUSTDESK_API_CONNECTION_ACCESS_URL` 时原有连接方式保持不变。

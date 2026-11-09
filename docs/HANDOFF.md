@@ -103,3 +103,26 @@ python3 scripts/test_control_roles.py target/debug/hbbs
 对应版本：Server [ee9ff73](https://github.com/HSOS6Miyabi/rustdesk-server/commit/ee9ff73be768677f24ee883e33bca59cfe21c48d)，API [e850b81](https://github.com/HSOS6Miyabi/rustdesk-api/commit/e850b81dce8f39468cf43cb5d1adb81d79bf65dc)。当前均已通过 CI。
 
 使用本功能时需要配置 `RUSTDESK_API_CONTROL_ROLE_URL` 和内部通信密钥，具体见 [环境变量说明](environment-variables.md)。尚未分配控制角色的设备继续使用原有设置。
+
+## 可选的服务器连接访问许可
+
+Server 的 `src/connection_access.rs` 通过受内部密钥保护的 HTTP 请求向 API 查询访问许可，`src/rendezvous_server.rs` 在普通连接和中继连接协商前使用此结果。
+
+`scripts/test_connection_access.py` 启动真实 hbbs、模拟 API 及目标设备注册，检查获得许可的连接可以发送到目标设备、未获许可的请求无法转发、API 无响应时严格模式拒绝新连接。
+
+启用该功能需要：
+
+```bash
+export RUSTDESK_API_CONNECTION_ACCESS_URL="http://127.0.0.1:21114/internal/v1/connection/authorize"
+export RUSTDESK_API_INTERNAL_KEY="与 API 相同的内部通信密钥"
+```
+
+未配置时保留原有连接行为。配套 API 数据库迁移版本为 280，必须先在管理界面为跨账户访问建立需要的允许规则。严格模式要求登录令牌及 API 中已登记的目标设备。
+
+```bash
+cargo test --locked --lib --tests
+cargo build --locked --bins
+python3 scripts/test_connection_access.py target/debug/hbbs
+```
+
+对应 Server 代码提交 [4ba02a9](https://github.com/HSOS6Miyabi/rustdesk-server/commit/4ba02a96a0b4eca0aab7bd77ed5c4bafe6d2d0b7)，[CI 测试通过](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42578682536)。

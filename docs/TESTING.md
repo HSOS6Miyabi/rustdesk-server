@@ -81,3 +81,15 @@ python3 scripts/test_control_roles.py target/debug/hbbs
 测试还检查未分配角色时保留原有协议消息。配套 API 需要执行 `go test ./service -run TestControl -count=1` 及 `go test ./http/controller/api -run TestInternalControl -count=1`。
 
 [本阶段 Server CI](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42569942719)已通过。
+
+## 可选的服务器连接访问许可
+
+```bash
+cargo test --locked --lib --tests
+cargo build --locked --bins
+python3 scripts/test_connection_access.py target/debug/hbbs
+```
+
+运行测试将启动 hbbs 和本地模拟 API，验证有效授权令牌、未获授权的客户端、缺少令牌的普通连接、中继连接以及 API 无法访问的情况。无授权的连接请求不会发送给目标设备。
+
+[Server CI 运行记录](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42578682536)：通过。

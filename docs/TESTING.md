@@ -129,3 +129,17 @@ python3 scripts/test_strict_combination.py target/debug/hbbs
 此测试使用临时内部 HTTP API，检查已登记设备的允许与撤销、有效和无效令牌、无连接权限、API 暂时不可用及控制角色消息。对应 [Server Rust CI #42634291061](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42634291061) 已成功；[AMD64、ARM64 双架构组合部署 #42634291214](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42634291214) 也已成功。未来结合真实 API、客户端与公网环境时，仍需单独记录实际操作结果。
 
 新接手人员请先查看 [Server 开发交接快照](HANDOFF_SNAPSHOT_2026-11-09.md)，以及配套 [API 22 项任务记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/TASK_VERIFICATION_RECORD.md)。
+
+
+## 使用实际 API 的设备登记与严格模式联合测试
+
+在 API 源代码目录将 `cmd/apimain.go` 编译为 `docker-bin/apimain`，然后在 Server 仓库编译 `hbbs`、`hbbr`。联合测试会创建自己的临时数据库、配置文件和通信密钥：
+
+```bash
+python3 scripts/test_real_api_registration.py /path/to/rustdesk-api/docker-bin/apimain target/release/hbbs
+python3 scripts/test_real_api_strict_combination.py /path/to/rustdesk-api/docker-bin/apimain target/release/hbbs
+```
+
+第一项检查实际 API 对设备部署的响应、重复登记、冲突、撤销及 API 中断；第二项在同一实际 API 与 hbbs 中检查 JWT、登录令牌、访问许可、控制角色与中继信令。两项已经纳入 `.github/workflows/milestone-preflight.yml`，并在 AMD64、ARM64 上通过。
+
+[两架构联合测试 #42647450607](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42647450607) 同时完成普通进程、组合 Docker 容器、服务通信、重启及数据保持检查。正式多设备和公网测试仍需配置实际终端及网络环境。

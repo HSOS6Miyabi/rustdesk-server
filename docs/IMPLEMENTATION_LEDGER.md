@@ -1,6 +1,6 @@
 # RustDesk Server 开发实施台账
 
-> **交接入口：[Server 最新开发交接快照](HANDOFF_SNAPSHOT_2026-11-09.md)、[API 与 Server 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)、[22 项逐项记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/TASK_VERIFICATION_RECORD.md)。** Server 已通过 [Rust 编译和实际服务检查 #42634291061](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42634291061) 以及 [AMD64、ARM64 组合部署和重启检查 #42634291214](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42634291214)。配套 API 的代码及检查以其 [开发分支](https://github.com/HSOS6Miyabi/rustdesk-api/tree/development/m1-device-management) 和 GitHub Actions 最新运行结果为准。两个仓库的拉取请求继续保持草稿状态，尚未发布新版本。
+> **交接入口：[Server 最新开发交接快照](HANDOFF_SNAPSHOT_2026-11-09.md)、[API 与 Server 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)、[22 项逐项记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/TASK_VERIFICATION_RECORD.md)。** Server 已通过 [Rust 编译和实际服务检查 #42647450900](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42647450900) 以及 [AMD64、ARM64 实际 API 联合授权及组合部署 #42647450607](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42647450607)。配套 API 的代码及检查以其 [开发分支](https://github.com/HSOS6Miyabi/rustdesk-api/tree/development/m1-device-management) 和 GitHub Actions 最新运行结果为准。两个仓库的拉取请求继续保持草稿状态，尚未发布新版本。
 
 本文件继续保留各项服务端功能的原始提交和测试记录，全部任务的当前状态、优先级与发布条件统一从上述总账查阅。
 
@@ -276,3 +276,20 @@ Server 与 API 的开发分支已完成两种部署方式的自动化运行检�
 Server 的 `.github/workflows/milestone-preflight.yml` 在运行时从配套 API 的 `development/m1-device-management` 获取代码，并在 AMD64、ARM64 上编译两个项目及启动组合容器。此工作流包含普通进程与 Docker 两种部署方式的服务检查，以及重启后 API 数据和 RustDesk 服务端公钥的保持检查。API 数据库备份与恢复说明可通过 [统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md) 查阅。
 
 以上测试均在 GitHub Actions 临时环境运行。真实多平台远程控制、正式 SMTP、地理分布式中继及生产数据库的恢复演练仍属于正式发布前检查项目。两个拉取请求继续保持草稿。
+
+
+## 2026-11-09：实际 API、hbbs 的设备登记与严格访问许可
+
+在 `scripts/test_real_api_registration.py` 中同时启动实际 API 和 `hbbs`，使用独立数据库验证设备登记、内部认证密钥、设备标识与公钥冲突、重复部署、撤销和恢复许可，以及 API 停止运行后的设备登记行为。
+
+在 `scripts/test_real_api_strict_combination.py` 中同时启用 `MUST_LOGIN=Y`、`REQUIRE_DEVICE_DEPLOYMENT=Y`、JWT、实际 API 连接许可和控制角色。使用临时账户和数据库检查设备所有者访问、其他账户的允许及禁止规则、无效 JWT 签名、失效登录会话、WebSocket 连接协商、中继请求与控制权限，以及 API 中断时的连接拒绝。测试密钥在每次运行时独立生成。
+
+| 项目 | 验证结果 |
+| --- | --- |
+| API 配套功能提交 | [dc0a9983](https://github.com/HSOS6Miyabi/rustdesk-api/commit/dc0a998369d0d1cee8d9daba7a837b9a2ba966f0) |
+| Server 实现及测试提交 | [eb4b586f](https://github.com/HSOS6Miyabi/rustdesk-server/commit/eb4b586f9c65a1060dea8ce56b4809dec746c788) |
+| Rust 编译、单元测试及实际通信 | [GitHub Actions #42647450900](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42647450900)：成功 |
+| AMD64 与 ARM64 的联合授权、容器启动、重启和数据保持 | [GitHub Actions #42647450607](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42647450607)：成功 |
+| 官方 Linux 1.5.1 与实际 API 部署及直接分配 | [API #42646358750](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42646358750)：成功 |
+
+相关流程位于 `.github/workflows/milestone-preflight.yml`；执行命令见 [Server 测试说明](TESTING.md)。实际双终端远程会话、公网与跨地区中继、正式 GeoLite2 数据及主机部署仍按统一 T001–T022 清单执行。发布工作流保持人工明确批准的要求。

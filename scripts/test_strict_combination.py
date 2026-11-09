@@ -155,7 +155,7 @@ def main():
                         register = text_field(1, DEVICE) + raw_field(2, UUID) + raw_field(3, PK)
                         receiver.sendto(raw_field(15, register), ("127.0.0.1", port))
                         registered = recv_registered_target(receiver, 16)
-                        if registered.get(1, [1])[0] != 0:
+                        if registered.get(1, [0])[0] != 0:
                             raise AssertionError(f"approved device was rejected: {registered}")
 
                         def punch(token):

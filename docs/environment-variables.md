@@ -302,7 +302,7 @@ hbbs -r relay-backup.example.com:21117
 
 内部节点列表应通过本地网络、受信任的私有网络或 HTTPS 访问。如果使用 Docker，API 与 hbbs 必须能够通过配置的地址相互通信；不能无条件使用宿主机的 `127.0.0.1`。
 
-## 使用 GeoLite2 Country CSV 识别客户端国家
+## 使用 GeoLite2 Country MMDB 或 CSV 识别客户端国家
 
 如果希望按国家自动选择中继，在运行 hbbs 的服务器上下载并解压 MaxMind GeoLite2 Country CSV。
 
@@ -321,11 +321,19 @@ hbbs -r relay-backup.example.com:21117
 export RUSTDESK_GEOIP_CSV_DIR="/opt/rustdesk/geoip"
 ```
 
+也可以直接提供 GeoLite2 Country MMDB 文件：
+
+```bash
+export RUSTDESK_GEOIP_MMDB_FILE="/opt/rustdesk/geoip/GeoLite2-Country.mmdb"
+```
+
+`RUSTDESK_GEOIP_MMDB_FILE` 与 `RUSTDESK_GEOIP_CSV_DIR` 可以分别设置，也可以同时设置。两种格式同时配置时，优先使用 MMDB 的国家代码；对于 MMDB 未覆盖的地址，再查询 CSV。配置变更后重新启动 hbbs；文件内容更新后使用下述 `reload-geo` 命令重新读取。若新文件有错误，正在运行的服务器保留此前加载成功的地理数据。
+
 GeoLite2 文件获取方式和 CSV 字段说明见 [MaxMind 开发者文档](https://dev.maxmind.com/geoip/docs/databases/city-and-country/)。
 
 使用 API 的“中继节点管理”，在国家代码字段填写两位 ISO 国家代码，例如 `JP,US`。hbbs 会根据客户端 IP 的国家归属优先选择指定节点。如果管理员还设置了精确 CIDR 网络范围，精确网络规则将优先使用。
 
-CSV 文件更新后，在 hbbs 的本地管理端口发送 `reload-geo`：
+MMDB 或 CSV 文件更新后，在 hbbs 的本地管理端口发送 `reload-geo`：
 
 ```bash
 printf 'reload-geo' | nc 127.0.0.1 21115
@@ -333,7 +341,7 @@ printf 'reload-geo' | nc 127.0.0.1 21115
 
 如果使用自定义 ID 服务端端口，请将 21115 改成 `PORT-1`。
 
-没有提供 `RUSTDESK_GEOIP_CSV_DIR` 或 Country CSV 文件时，其他中继设置仍然有效。GeoLite2 数据不包含在仓库和 Docker 镜像中，需要管理员自行准备。在 Docker 中使用时，将目录挂载到容器并设置容器内的路径。
+未设置任何 GeoLite2 环境变量时，其他中继设置仍然有效。GeoLite2 数据不包含在仓库和 Docker 镜像中，需要管理员自行准备。在 Docker 中使用时，将 MMDB 文件或 CSV 目录挂载到容器并设置相应的容器内路径。
 
 ## 从 API 获取远程控制角色
 

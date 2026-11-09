@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - forapi
+  pull_request:
+    paths:
+      - '.github/workflows/publish-approved-milestone.yml'
 
 permissions:
   contents: write
@@ -19,6 +22,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" != "push" ]]; then
+            echo "Publication checks run without creating a release."
+            exit 0
+          fi
           if ! jq -e '.head_commit.message | contains("release-milestone-server-20261110")' "$GITHUB_EVENT_PATH" >/dev/null; then
             echo "This commit does not request a milestone release."
             exit 0

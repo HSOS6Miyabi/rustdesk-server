@@ -1,0 +1,89 @@
+name: RustDesk combined milestone preflight
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rustdesk-combined-preflight-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  combined-image:
+    name: Local API + Server image (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+            s6arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            s6arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.10'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install native libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libsodium-dev libssl-dev libsqlite3-dev xz-utils
+      - name: Fetch matching API development branch
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch development/m1-device-management \
+            https://github.com/HSOS6Miyabi/rustdesk-api.git /tmp/rustdesk-api
+          echo "RustDesk Server commit: $(git rev-parse HEAD)"
+          echo "RustDesk API commit: $(git -C /tmp/rustdesk-api rev-parse HEAD)"
+      - name: Build and test native API
+        working-directory: /tmp/rustdesk-api
+        run: |
+          set -euo pipefail
+          go test ./... -count=1
+          npm ci --prefix resources/web/js --no-audit --no-fund
+          npm run build --prefix resources/web/js
+          mkdir -p docker-bin
+          CGO_ENABLED=1 go build -trimpath -o docker-bin/apimain ./cmd/apimain.go
+          test -s docker-bin/apimain
+      - name: Build API Docker image locally
+        working-directory: /tmp/rustdesk-api
+        run: |
+          set -euo pipefail
+          docker build --pull=false -f Dockerfile.release \
+            -t ghcr.io/hsos6miyabi/rustdesk-api:dev-preflight .
+          docker run --rm --entrypoint /bin/sh \
+            ghcr.io/hsos6miyabi/rustdesk-api:dev-preflight \
+            -c 'test -x /app/apimain && test -s /app/resources/admin/index.html'
+      - name: Compile RustDesk server executables
+        run: |
+          set -euo pipefail
+          cargo test --locked --lib --tests
+          cargo build --locked --release --bins
+          install -m755 target/release/hbbs docker/rootfs/usr/bin/hbbs
+          install -m755 target/release/hbbr docker/rootfs/usr/bin/hbbr
+          install -m755 target/release/rustdesk-utils docker/rootfs/usr/bin/rustdesk-utils
+      - name: Build combined image without publishing
+        run: |
+          set -euo pipefail
+          docker build --pull=false \
+            --build-arg API_IMAGE_TAG=dev-preflight \
+            --build-arg S6_ARCH=${{ matrix.s6arch }} \
+            -t rustdesk-combined:dev-preflight docker
+          docker image inspect rustdesk-combined:dev-preflight \
+            --format '{{.Os}}/{{.Architecture}}'
+      - name: Check running API, hbbs, hbbr and WebSockets
+        run: python3 scripts/test_container_image.py rustdesk-combined:dev-preflight

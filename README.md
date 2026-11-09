@@ -1,6 +1,6 @@
 # RustDesk 自托管服务端
 
-> **接手开发请先阅读：[两仓库完整实施台账与 T001 至 T022 待办事项](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)。** 本仓库的 [Server 实施记录](docs/IMPLEMENTATION_LEDGER.md)、[接手说明](docs/HANDOFF.md)和[测试说明](docs/TESTING.md)提供服务端详细资料。开发分支尚未完成发布里程碑。
+> **交接入口：[Server 开发交接快照](docs/HANDOFF_SNAPSHOT_2026-11-09.md)、[Server 实施台账](docs/IMPLEMENTATION_LEDGER.md)、[API 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)、[22 项逐项记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/TASK_VERIFICATION_RECORD.md)。** 本仓库的 [Server 实施记录](docs/IMPLEMENTATION_LEDGER.md)、[接手说明](docs/HANDOFF.md)和[测试说明](docs/TESTING.md)提供服务端详细资料。开发分支尚未完成发布里程碑。
 
 本仓库在 [RustDesk Server](https://github.com/rustdesk/rustdesk-server) 与 [lejianwen/rustdesk-server](https://github.com/lejianwen/rustdesk-server) 的基础上持续维护，提供与 [本项目 RustDesk API](https://github.com/HSOS6Miyabi/rustdesk-api) 配合使用的服务器程序。
 

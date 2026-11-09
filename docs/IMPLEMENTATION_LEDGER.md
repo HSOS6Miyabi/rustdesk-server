@@ -1,6 +1,6 @@
 # RustDesk Server 开发实施台账
 
-> **当前项目状态与完整待办清单：[API 与 Server 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)。** Server 已通过 [Rust 编译和实际服务检查 #42620496880](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42620496880) 以及 [AMD64、ARM64 组合部署和重启检查 #42620496807](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42620496807)。配套 API 的代码及检查以其 [开发分支](https://github.com/HSOS6Miyabi/rustdesk-api/tree/development/m1-device-management) 和 GitHub Actions 最新运行结果为准。两个仓库的拉取请求继续保持草稿状态，尚未发布新版本。
+> **交接入口：[Server 最新开发交接快照](HANDOFF_SNAPSHOT_2026-11-09.md)、[API 与 Server 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)、[22 项逐项记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/TASK_VERIFICATION_RECORD.md)。** Server 已通过 [Rust 编译和实际服务检查 #42634291061](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42634291061) 以及 [AMD64、ARM64 组合部署和重启检查 #42634291214](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42634291214)。配套 API 的代码及检查以其 [开发分支](https://github.com/HSOS6Miyabi/rustdesk-api/tree/development/m1-device-management) 和 GitHub Actions 最新运行结果为准。两个仓库的拉取请求继续保持草稿状态，尚未发布新版本。
 
 本文件继续保留各项服务端功能的原始提交和测试记录，全部任务的当前状态、优先级与发布条件统一从上述总账查阅。
 

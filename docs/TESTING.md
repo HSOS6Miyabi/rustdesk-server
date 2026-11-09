@@ -116,3 +116,16 @@ python3 scripts/test_persistent_container.py rustdesk-combined:dev-preflight
 `test_persistent_container.py` 挂载独立的 API 与 Server 数据卷，重新创建 Docker 容器，检查账户、数据库和 RustDesk 身份文件保持一致。整个过程使用测试数据和临时容器，不创建正式发行镜像。
 
 对应 [AMD64、ARM64 组合部署检查 #42620496807](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42620496807)，成功。配套 API 的 SQLite、MySQL 和 PostgreSQL 备份恢复方法见 [数据库备份恢复说明](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/DATABASE_BACKUP_RESTORE.md)。
+
+
+## 最新严格模式组合检查
+
+一次真实的 hbbs 运行中同时测试严格登记、MUST_LOGIN、JWT、集中连接许可和控制角色：
+
+```bash
+python3 scripts/test_strict_combination.py target/debug/hbbs
+```
+
+此测试使用临时内部 HTTP API，检查已登记设备的允许与撤销、有效和无效令牌、无连接权限、API 暂时不可用及控制角色消息。对应 [Server Rust CI #42634291061](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42634291061) 已成功；[AMD64、ARM64 双架构组合部署 #42634291214](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42634291214) 也已成功。未来结合真实 API、客户端与公网环境时，仍需单独记录实际操作结果。
+
+新接手人员请先查看 [Server 开发交接快照](HANDOFF_SNAPSHOT_2026-11-09.md)，以及配套 [API 22 项任务记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/TASK_VERIFICATION_RECORD.md)。

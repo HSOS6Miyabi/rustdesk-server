@@ -1,6 +1,6 @@
 # RustDesk Server 开发实施台账
 
-> **当前项目状态与完整待办清单：[API 与 Server 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)。** 当前已检查的 Server 代码提交为 [646fae0](https://github.com/HSOS6Miyabi/rustdesk-server/commit/646fae03b6c4f7a170e3df394df450701a6b421c)，对应 [CI 42579839266](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42579839266) 已通过；配套 API 的已检查提交为 [7297f1c](https://github.com/HSOS6Miyabi/rustdesk-api/commit/7297f1cfd3f3ccbe6e65856457d1f11c9d9d2033)。此后如有新提交，应先重新检查两个分支的最新状态。
+> **当前项目状态与完整待办清单：[API 与 Server 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)。** 最近已通过 Rust 和真实服务检查的 Server 功能代码提交为 [79146fe](https://github.com/HSOS6Miyabi/rustdesk-server/commit/79146fe486b545ecae3925916d848cac21be42ee)，对应 [CI 42588361437](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42588361437)；配套 API 的批量管理功能已通过 [CI 42587648927](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42587648927)。部署时需重新确认两个开发分支最新的提交和 CI 结果。
 
 本文件继续保留各项服务端功能的原始提交和测试记录，全部任务的当前状态、优先级与发布条件统一从上述总账查阅。
 
@@ -224,3 +224,31 @@ API 无法访问、令牌失效或连接不符合规则时，严格模式会拒�
 - [API 管理控制台浏览器测试](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42578812266)：通过。
 
 真实客户端的多平台登录、直接连接与严格模式兼容性仍需在里程碑发布前检查。
+
+
+## 2026-11-09：组合容器构建与 GeoLite2 MMDB 数据读取
+
+### 双架构部署预演
+
+新增 `.github/workflows/milestone-preflight.yml`，在 Linux AMD64 和 ARM64 运行器上获取两个开发仓库代码，构建配套 API、RustDesk Server 与组合容器镜像，并通过 `scripts/test_container_image.py` 实际启动容器检查 API、hbbs、hbbr、WebSocket 和管理页面。组合镜像不推送到正式仓库。
+
+- [组合容器预演 CI 42585097640](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42585097640)：两个架构均通过。
+- 与配套 API 的设备登记、自动化管理、角色和批量功能使用相同开发分支。正式部署时仍需进行真实设备及网络环境测试。
+
+### GeoLite2 Country MMDB 与 CSV
+
+| 位置 | 内容 |
+| --- | --- |
+| `Cargo.toml` | 增加 `maxminddb` 读取依赖 |
+| `src/geoip_country.rs` | 支持 MMDB Country 读取和 IPv4/IPv6 国家识别，同时保留原有 CSV 查询 |
+| `src/rendezvous_server.rs` | 启动和 `reload-geo` 时加载两类文件；刷新失败时保留已有有效数据 |
+| `tests/fixtures/GeoLite2-Country-Test.mmdb` | MaxMind 公开的示例国家数据库及来源说明，供自动测试使用 |
+| `docs/environment-variables.md` | 记录 MMDB 和 CSV 的使用方法及 `reload-geo` 操作 |
+
+使用 `RUSTDESK_GEOIP_MMDB_FILE` 指向单个数据库文件，也可以继续使用 `RUSTDESK_GEOIP_CSV_DIR` 指向原有 CSV 目录。两项同时配置时，先查询 MMDB，未取得国家代码时再查 CSV。未设置时沿用已有的中继选择方式。
+
+- [Server Rust 单元测试、真实服务和协议检查 42588361437](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42588361437)：通过。
+- 示例数据库来自 [MaxMind-DB 公开测试数据](https://github.com/maxmind/MaxMind-DB)，与商业或正式 GeoLite2 分发数据分开存放。
+- 正式数据库由实际部署者自行获取。多地区公网的连接质量仍需在发布前验证。
+
+所有修改均保留在 `development/m1-device-management`，两个拉取请求继续保持草稿。首个里程碑仍须等待维护者明确确认，日常开发不创建 Release 或正式镜像。

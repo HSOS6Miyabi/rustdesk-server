@@ -1,6 +1,6 @@
 # RustDesk Server 开发实施台账
 
-> **当前项目状态与完整待办清单：[API 与 Server 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)。** 最近已通过 Rust 和真实服务检查的 Server 功能代码提交为 [79146fe](https://github.com/HSOS6Miyabi/rustdesk-server/commit/79146fe486b545ecae3925916d848cac21be42ee)，对应 [CI 42588361437](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42588361437)；配套 API 的批量管理功能已通过 [CI 42587648927](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42587648927)。部署时需重新确认两个开发分支最新的提交和 CI 结果。
+> **当前项目状态与完整待办清单：[API 与 Server 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)。** Server 已通过 [Rust 编译和实际服务检查 #42618004098](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42618004098) 以及 [AMD64、ARM64 组合部署和重启检查 #42618003889](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42618003889)。配套 API 的代码及检查以其 [开发分支](https://github.com/HSOS6Miyabi/rustdesk-api/tree/development/m1-device-management) 和 GitHub Actions 最新运行结果为准。两个仓库的拉取请求继续保持草稿状态，尚未发布新版本。
 
 本文件继续保留各项服务端功能的原始提交和测试记录，全部任务的当前状态、优先级与发布条件统一从上述总账查阅。
 
@@ -252,3 +252,18 @@ API 无法访问、令牌失效或连接不符合规则时，严格模式会拒�
 - 正式数据库由实际部署者自行获取。多地区公网的连接质量仍需在发布前验证。
 
 所有修改均保留在 `development/m1-device-management`，两个拉取请求继续保持草稿。首个里程碑仍须等待维护者明确确认，日常开发不创建 Release 或正式镜像。
+
+
+## 2026-11-09：普通服务器部署与 Docker 重启测试
+
+Server 与 API 的开发分支已完成两种部署方式的自动化运行检查，检查项目包括程序启动、通信端口、WebClient 页面、数据库保持和服务器密钥保持。
+
+| 部署方式 | 运行方式及检查内容 | 运行结果 |
+| --- | --- | --- |
+| 普通服务器进程 | 在临时目录运行配套 API、`hbbs`、`hbbr`；检查 TCP、UDP、WebSocket、管理页面、WebClient；重新启动后复查账户、数据库版本和服务端公钥 | [双架构组合检查 #42618003889](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42618003889)，成功 |
+| Docker | 在 AMD64、ARM64 上分别创建组合镜像和容器；挂载 API、Server 两个独立数据卷，删除容器并重新创建，检查上述关键数据保持一致 | [双架构组合检查 #42618003889](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42618003889)，成功 |
+| RustDesk Server 单独运行 | 编译并检查 `hbbs`、`hbbr`，以及 TCP、UDP、WebSocket 和相关协议 | [Rust 测试 #42618004098](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42618004098)，成功 |
+
+相关文件为 `scripts/test_native_stack.py`、`scripts/test_persistent_container.py`、`scripts/test_container_image.py` 和 `.github/workflows/milestone-preflight.yml`。测试所用的 API 由同一工作流读取配套开发分支进行编译。镜像仅保存在临时运行环境中，测试结束后清理容器和测试数据卷。
+
+正式使用环境还需分别检查公网连通、系统服务自动启动、备份恢复、真实客户端登录及远程操作。管理者确认首个发布里程碑之前，继续维持草稿拉取请求，不创建正式 Release 或正式 Docker 镜像。

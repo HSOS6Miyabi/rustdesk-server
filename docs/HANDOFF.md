@@ -15,7 +15,7 @@
 1. `git clone --recurse-submodules` 本仓库，切换开发分支并检查最新提交。
 2. 阅读 [IMPLEMENTATION_LEDGER.md](IMPLEMENTATION_LEDGER.md) 和 API 的 [功能清单](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/FEATURE_MATRIX.md)。
 3. 检查两个草稿 PR 的 CI 测试结果。
-4. 运行 `cargo test --locked --lib --tests`、`cargo build --locked --bins` 和服务通信测试。
+4. 运行 `cargo test --lib --tests`、`cargo build --bins` 和服务通信测试。
 5. 将 API 与 `hbbs` 放在同一测试网络，检查严格登记启停、客户端 `--deploy`、`RegisterPk`。
 6. 测试原有 `MUST_LOGIN=N` 与 `MUST_LOGIN=Y` 的设备连接和中继连接。
 7. 每次独立功能完成后更新实施台账、测试说明及两个仓库之间的对应提交。
@@ -55,8 +55,8 @@ python3 scripts/test_device_deployment.py target/debug/hbbs
 配置和启用方法见 [环境变量说明](environment-variables.md)。如果不需要集中管理多个中继，保持 `RUSTDESK_API_RELAY_NODES_URL` 未设置即可。
 
 ```bash
-cargo test --locked --lib --tests
-cargo build --locked --bins
+cargo test --lib --tests
+cargo build --bins
 python3 scripts/test_runtime.py target/debug/hbbs target/debug/hbbr
 python3 scripts/test_managed_relays.py target/debug/hbbs
 ```
@@ -67,19 +67,20 @@ python3 scripts/test_managed_relays.py target/debug/hbbs
 
 相关测试记录：[Server CI](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42565263648)、[API CI](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42565425669)。
 
-**下一阶段：**继续补充 GeoLite2 地理位置数据库、更多客户端策略和设备管理功能，新增模块时更新台账及测试说明。
+**下一阶段：**在真实客户端和不同网络环境中检查设备管理、会话权限及中继选择，新增功能时更新台账与测试说明。
 
-## GeoLite2 Country CSV 功能接手
+## GeoLite2 Country MMDB 与 CSV 功能接手
 
-- `src/geoip_country.rs`：按 MaxMind 官方 Country CSV 字段读取数据。使用 IPv4/IPv6 网络前缀查找国家代码。
+- `src/geoip_country.rs`：支持 MaxMind Country MMDB 文件和 Country CSV 数据，均可用于识别 IPv4/IPv6 国家代码。MMDB 数据优先，未识别时尝试 CSV。
 - `src/relay_policy.rs`：节点国家代码与精确 CIDR 的选择策略，CIDR 规则优先。
-- `src/rendezvous_server.rs`：读取 `RUSTDESK_GEOIP_CSV_DIR`，并支持 `reload-geo` 重新载入。
+- `src/rendezvous_server.rs`：读取 `RUSTDESK_GEOIP_MMDB_FILE` 或 `RUSTDESK_GEOIP_CSV_DIR`，并支持 `reload-geo` 重新读取。
 - `scripts/test_managed_relays.py`：内置小规模 Country CSV 测试数据，用真实 hbbs 进程验证国家偏好和服务配置变化。
 
 配置示例：
 
 ```bash
-export RUSTDESK_GEOIP_CSV_DIR="/opt/rustdesk/geoip"
+export RUSTDESK_GEOIP_MMDB_FILE="/opt/rustdesk/geoip/GeoLite2-Country.mmdb"
+# 也可以配置 RUSTDESK_GEOIP_CSV_DIR="/opt/rustdesk/geoip"
 export RUSTDESK_API_RELAY_NODES_URL="http://127.0.0.1:21114/internal/v1/relay/nodes"
 export RUSTDESK_API_INTERNAL_KEY="与 API 一致的密钥"
 ```
@@ -97,8 +98,8 @@ Server 代码分布：
 API 提供管理页面、设备／用户／设备组角色分配，以及 `GET /internal/v1/control/permissions?device_id=...`。
 
 ```bash
-cargo test --locked --lib --tests
-cargo build --locked --bins
+cargo test --lib --tests
+cargo build --bins
 python3 scripts/test_control_roles.py target/debug/hbbs
 ```
 
@@ -122,8 +123,8 @@ export RUSTDESK_API_INTERNAL_KEY="与 API 相同的内部通信密钥"
 未配置时保留原有连接行为。配套 API 数据库迁移版本为 280，必须先在管理界面为跨账户访问建立需要的允许规则。严格模式要求登录令牌及 API 中已登记的目标设备。
 
 ```bash
-cargo test --locked --lib --tests
-cargo build --locked --bins
+cargo test --lib --tests
+cargo build --bins
 python3 scripts/test_connection_access.py target/debug/hbbs
 ```
 

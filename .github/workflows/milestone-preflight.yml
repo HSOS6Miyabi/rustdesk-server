@@ -87,3 +87,5 @@ jobs:
             --format '{{.Os}}/{{.Architecture}}'
       - name: Check running API, hbbs, hbbr and WebSockets
         run: python3 scripts/test_container_image.py rustdesk-combined:dev-preflight
+      - name: Verify that API accounts and server keys persist across container recreation
+        run: python3 scripts/test_persistent_container.py rustdesk-combined:dev-preflight

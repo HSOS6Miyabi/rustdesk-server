@@ -85,7 +85,7 @@ def websocket_request(port, message_type, body, denied=False):
                 answer = parse_fields(ws_recv_binary(caller))
                 if 9 in answer or 12 in answer or 18 in answer:
                     raise AssertionError("server forwarded a denied punch request")
-                if 10 not in answer:
+                if 11 not in answer:
                     raise AssertionError(f"server response has no connection refusal: {answer}")
             except (socket.timeout, EOFError):
                 # No forwarding is also checked directly at the target.

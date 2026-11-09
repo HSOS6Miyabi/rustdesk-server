@@ -42,6 +42,7 @@ use ipnetwork::Ipv4Network;
 use crate::jwt;
 use crate::device_deployment;
 use crate::relay_policy;
+use crate::geoip_country;
 use std::{
     collections::{HashMap, VecDeque},
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
@@ -56,6 +57,7 @@ enum Data {
     RelayServers0(String),
     RelayServers(RelayServers),
     ManagedRelays(relay_policy::RelayPolicy),
+    CountryData(geoip_country::CountryDatabase),
 }
 
 const REG_TIMEOUT: i64 = 30_000;
@@ -240,6 +242,7 @@ pub struct RendezvousServer {
     relay_servers: Arc<RelayServers>,
     relay_servers0: Arc<RelayServers>,
     relay_policy: Arc<relay_policy::RelayPolicy>,
+    geoip_country: Arc<geoip_country::CountryDatabase>,
     default_relay_servers: String,
     rendezvous_servers: Arc<Vec<String>>,
     inner: Arc<Inner>,
@@ -293,6 +296,20 @@ impl RendezvousServer {
         };
         // For privacy use per connection key pair
         let (secure_tcp_pk_b, secure_tcp_sk_b) = box_::gen_keypair();
+        let geoip_country = match geoip_country::load_from_environment() {
+            Ok(Some(database)) => {
+                log::info!(
+                    "Loaded {} GeoLite2 Country IP networks",
+                    database.block_count()
+                );
+                database
+            }
+            Ok(None) => geoip_country::CountryDatabase::default(),
+            Err(err) => {
+                log::warn!("Unable to load GeoLite2 Country CSV: {}", err);
+                geoip_country::CountryDatabase::default()
+            }
+        };
         let default_relay_servers = get_arg("relay-servers");
         let mut rs = Self {
             tcp_punch: Arc::new(Mutex::new(HashMap::new())),
@@ -302,6 +319,7 @@ impl RendezvousServer {
             relay_servers: Default::default(),
             relay_servers0: Default::default(),
             relay_policy: Arc::new(relay_policy::RelayPolicy::default()),
+            geoip_country: Arc::new(geoip_country),
             default_relay_servers: default_relay_servers.clone(),
             rendezvous_servers: Arc::new(rendezvous_servers),
             inner: Arc::new(Inner {
@@ -481,6 +499,9 @@ impl RendezvousServer {
                         Data::Msg(msg, addr) => { allow_err!(socket.send(msg.as_ref(), addr).await); }
                         Data::RelayServers0(rs) => { self.parse_relay_servers(&rs); }
                         Data::RelayServers(rs) => { self.relay_servers = Arc::new(rs); }
+                        Data::CountryData(database) => {
+                            self.geoip_country = Arc::new(database);
+                        }
                         Data::ManagedRelays(settings) => {
                             if settings.nodes.is_empty() {
                                 self.relay_policy = Arc::new(relay_policy::RelayPolicy::default());
@@ -1454,6 +1475,7 @@ impl RendezvousServer {
             let fallback = get_servers(&self.default_relay_servers, "relay-servers");
             return relay_policy::select(
                 &relay_policy::RelayPolicy::default(),
+                &self.geoip_country,
                 &fallback,
                 pa,
                 pb,
@@ -1462,6 +1484,7 @@ impl RendezvousServer {
         }
         relay_policy::select(
             &self.relay_policy,
+            &self.geoip_country,
             &self.relay_servers,
             pa,
             pb,
@@ -1614,6 +1637,34 @@ impl RendezvousServer {
                         "ALWAYS_USE_RELAY: {:?}",
                         ALWAYS_USE_RELAY.load(Ordering::SeqCst)
                     );
+                }
+            }
+            Some("reload-geo" | "rg") => {
+                if geoip_country::configured() {
+                    let tx = self.tx.clone();
+                    tokio::spawn(async move {
+                        match tokio::task::spawn_blocking(geoip_country::load_from_environment).await {
+                            Ok(Ok(Some(database))) => {
+                                log::info!(
+                                    "Reloaded {} GeoLite2 Country IP networks",
+                                    database.block_count()
+                                );
+                                tx.send(Data::CountryData(database)).ok();
+                            }
+                            Ok(Ok(None)) => {
+                                log::warn!("GeoLite2 Country CSV directory is not configured");
+                            }
+                            Ok(Err(err)) => {
+                                log::warn!("Unable to reload GeoLite2 Country CSV: {}", err);
+                            }
+                            Err(err) => {
+                                log::warn!("GeoLite2 Country CSV reload task ended unexpectedly: {}", err);
+                            }
+                        }
+                    });
+                    res = "GeoLite2 country data reload requested\n".to_owned();
+                } else {
+                    res = "Set RUSTDESK_GEOIP_CSV_DIR to enable GeoLite2 country lookup\n".to_owned();
                 }
             }
             Some("test-geo" | "tg") => {

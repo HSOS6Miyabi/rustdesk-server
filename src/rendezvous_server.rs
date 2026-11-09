@@ -40,6 +40,11 @@ use hbb_common::{
 use ipnetwork::Ipv4Network;
 
 use crate::jwt;
+use crate::device_deployment;
+use crate::relay_policy;
+use crate::geoip_country;
+use crate::control_roles;
+use crate::connection_access;
 use std::{
     collections::{HashMap, VecDeque},
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
@@ -53,6 +58,8 @@ enum Data {
     Msg(Box<RendezvousMessage>, SocketAddr),
     RelayServers0(String),
     RelayServers(RelayServers),
+    ManagedRelays(relay_policy::RelayPolicy),
+    CountryData(geoip_country::CountryDatabase),
 }
 
 const REG_TIMEOUT: i64 = 30_000;
@@ -236,6 +243,9 @@ pub struct RendezvousServer {
     tx: Sender,
     relay_servers: Arc<RelayServers>,
     relay_servers0: Arc<RelayServers>,
+    relay_policy: Arc<relay_policy::RelayPolicy>,
+    geoip_country: Arc<geoip_country::CountryDatabase>,
+    default_relay_servers: String,
     rendezvous_servers: Arc<Vec<String>>,
     inner: Arc<Inner>,
     ws_map: Arc<Mutex<HashMap<SocketAddr, Sink>>>,
@@ -288,6 +298,22 @@ impl RendezvousServer {
         };
         // For privacy use per connection key pair
         let (secure_tcp_pk_b, secure_tcp_sk_b) = box_::gen_keypair();
+        let geoip_country = match geoip_country::load_from_environment() {
+            Ok(Some(database)) => {
+                log::info!(
+                    "Loaded GeoLite2 Country {} data ({} CSV networks)",
+                    database.data_format(),
+                    database.block_count()
+                );
+                database
+            }
+            Ok(None) => geoip_country::CountryDatabase::default(),
+            Err(err) => {
+                log::warn!("Unable to load GeoLite2 country data: {}", err);
+                geoip_country::CountryDatabase::default()
+            }
+        };
+        let default_relay_servers = get_arg("relay-servers");
         let mut rs = Self {
             tcp_punch: Arc::new(Mutex::new(HashMap::new())),
             webrtc_ice_routes: Arc::new(Mutex::new(HashMap::new())),
@@ -295,6 +321,9 @@ impl RendezvousServer {
             tx: tx.clone(),
             relay_servers: Default::default(),
             relay_servers0: Default::default(),
+            relay_policy: Arc::new(relay_policy::RelayPolicy::default()),
+            geoip_country: Arc::new(geoip_country),
+            default_relay_servers: default_relay_servers.clone(),
             rendezvous_servers: Arc::new(rendezvous_servers),
             inner: Arc::new(Inner {
                 serial,
@@ -311,7 +340,7 @@ impl RendezvousServer {
         log::info!("mask: {:?}", rs.inner.mask);
         log::info!("local-ip: {:?}", rs.inner.local_ip);
         std::env::set_var("PORT_FOR_API", port.to_string());
-        rs.parse_relay_servers(&get_arg("relay-servers"));
+        rs.parse_relay_servers(&default_relay_servers);
         let mut listener = create_tcp_listener(bind_addr, port).await?;
         let mut listener2 = create_tcp_listener(bind_addr, nat_port).await?;
         let mut listener3 = create_tcp_listener(bind_addr, ws_port).await?;
@@ -346,6 +375,13 @@ impl RendezvousServer {
                     == "Y")
         {
             MUST_LOGIN.store(true, Ordering::SeqCst);
+        }
+
+        if MUST_LOGIN.load(Ordering::SeqCst) && jwt::SECRET.is_empty() {
+            bail!("RUSTDESK_API_JWT_KEY must be configured when MUST_LOGIN=Y");
+        }
+        if device_deployment::enabled() && !device_deployment::configured() {
+            bail!("RUSTDESK_API_INTERNAL_KEY must be configured when REQUIRE_DEVICE_DEPLOYMENT=Y");
         }
 
         log::info!(
@@ -434,6 +470,8 @@ impl RendezvousServer {
         key: &str,
     ) -> LoopFailure {
         let mut timer_check_relay = interval(Duration::from_millis(CHECK_RELAY_TIMEOUT));
+        let mut timer_relay_settings =
+            interval(Duration::from_secs(relay_policy::refresh_seconds()));
         loop {
             tokio::select! {
                 _ = timer_check_relay.tick() => {
@@ -445,11 +483,42 @@ impl RendezvousServer {
                         });
                     }
                 }
+                _ = timer_relay_settings.tick(), if relay_policy::managed() => {
+                    let tx = self.tx.clone();
+                    tokio::spawn(async move {
+                        match relay_policy::fetch().await {
+                            Ok(Some(settings)) => {
+                                let _ = tx.send(Data::ManagedRelays(settings));
+                            }
+                            Ok(None) => {}
+                            Err(err) => {
+                                log::warn!("Unable to update relay preferences: {}", err);
+                            }
+                        }
+                    });
+                }
                 Some(data) = rx.recv() => {
                     match data {
                         Data::Msg(msg, addr) => { allow_err!(socket.send(msg.as_ref(), addr).await); }
                         Data::RelayServers0(rs) => { self.parse_relay_servers(&rs); }
                         Data::RelayServers(rs) => { self.relay_servers = Arc::new(rs); }
+                        Data::CountryData(database) => {
+                            self.geoip_country = Arc::new(database);
+                        }
+                        Data::ManagedRelays(settings) => {
+                            if settings.nodes.is_empty() {
+                                self.relay_policy = Arc::new(relay_policy::RelayPolicy::default());
+                                let defaults = self.default_relay_servers.clone();
+                                self.parse_relay_servers(&defaults);
+                            } else {
+                                let addresses = settings.nodes.iter()
+                                    .map(|node| node.address.as_str())
+                                    .collect::<Vec<_>>()
+                                    .join(",");
+                                self.relay_policy = Arc::new(settings);
+                                self.parse_relay_servers(&addresses);
+                            }
+                        }
                     }
                 }
                 res = socket.next() => {
@@ -664,6 +733,15 @@ impl RendezvousServer {
                     return true;
                 }
                 Some(rendezvous_message::Union::RequestRelay(mut rf)) => {
+                    if !connection_access::permitted(&rf.id, &rf.token).await {
+                        log::warn!("Reject relay connection to {} from {}",rf.id,addr);
+                        return false;
+                    }
+                    if MUST_LOGIN.load(Ordering::SeqCst) &&
+                        (rf.token.is_empty() || jwt::verify_token(&rf.token).is_err()) {
+                        log::warn!("Reject unauthenticated relay request from {}", addr);
+                        return false;
+                    }
                     if let Err(err) = validate_relay_uuid(&rf.uuid) {
                         log::warn!(
                             "Drop RequestRelay from {addr}: {err} (length {})",
@@ -676,6 +754,12 @@ impl RendezvousServer {
                         self.tcp_punch.lock().await.insert(try_into_v4(addr), sink);
                     }
                     if let Some(peer) = self.pm.get_in_memory(&rf.id).await {
+                        if let Some(bits) = control_roles::for_device(&rf.id).await {
+                            rf.control_permissions = MessageField::some(ControlPermissions {
+                                permissions: bits,
+                                ..Default::default()
+                            });
+                        }
                         let mut msg_out = RendezvousMessage::new();
                         rf.socket_addr = AddrMangle::encode(addr).into();
                         msg_out.set_request_relay(rf);
@@ -858,6 +942,21 @@ impl RendezvousServer {
             return Err(TOO_FREQUENT);
             //return Err(send_rk_res(socket, addr, TOO_FREQUENT).await);
         }
+        if device_deployment::enabled() {
+            match device_deployment::authorize(&id, &rk.uuid, &rk.pk).await {
+                device_deployment::Decision::Allowed => {}
+                device_deployment::Decision::NotDeployed => {
+                    return Err(register_pk_response::Result::NOT_DEPLOYED);
+                }
+                device_deployment::Decision::IdTaken => {
+                    return Err(register_pk_response::Result::ID_EXISTS);
+                }
+                device_deployment::Decision::ServiceError => {
+                    log::warn!("Device authorization service unavailable for {}", id);
+                    return Err(register_pk_response::Result::SERVER_ERROR);
+                }
+            }
+        }
         let peer = self.pm.get_or(&id).await;
         let (changed, ip_changed) = {
             let peer = peer.read().await;
@@ -926,8 +1025,12 @@ impl RendezvousServer {
             }
         }
         if changed || ws {
-            // update peer info，解决tcp过程中不更新在线时间的问题
             self.pm.update_pk(id, peer, addr, rk.uuid, rk.pk, ip).await;
+        } else if device_deployment::enabled() {
+            // The identity was approved, even though its persisted key did not change.
+            let mut active = peer.write().await;
+            active.socket_addr = addr;
+            active.last_reg_time = Instant::now();
         }
         Ok(register_pk_response::Result::OK)
         // let mut msg_out = RendezvousMessage::new();
@@ -940,6 +1043,10 @@ impl RendezvousServer {
 
     #[inline]
     async fn update_addr(&mut self, id: String, socket_addr: SocketAddr) -> bool {
+        if device_deployment::enabled() {
+            // Always require a new authenticated key registration in managed mode.
+            return true;
+        }
         let (request_pk, ip_change) = if let Some(old) = self.pm.get_in_memory(&id).await {
             let mut old = old.write().await;
             let ip = socket_addr.ip();
@@ -1067,7 +1174,16 @@ impl RendezvousServer {
             });
             return Ok((msg_out, None));
         }
-        // if secret is not empty check token by jwt
+        if !connection_access::permitted(&ph.id, &ph.token).await {
+            log::warn!("Reject connection access request to {} from {}", ph.id, addr);
+            let mut msg_out=RendezvousMessage::new();
+            msg_out.set_punch_hole_response(PunchHoleResponse{
+                other_failure:"Connection is not permitted for this account.".to_owned(),
+                ..Default::default()
+            });
+            return Ok((msg_out,None));
+        }
+        // Authenticate connection attempts when login is required.
         if MUST_LOGIN.load(Ordering::SeqCst) {
             if ph.token.is_empty() {
                 let mut msg_out = RendezvousMessage::new();
@@ -1076,7 +1192,7 @@ impl RendezvousServer {
                     ..Default::default()
                 });
                 return Ok((msg_out, None));
-            } else if !jwt::SECRET.is_empty() {
+            } else {
                 let token = ph.token;
                 let token = jwt::verify_token(token.as_str());
                 if token.is_err() {
@@ -1118,6 +1234,13 @@ impl RendezvousServer {
             )
             .await;
 
+            let control_permissions = match control_roles::for_device(&id).await {
+                Some(bits) => MessageField::some(ControlPermissions {
+                    permissions: bits,
+                    ..Default::default()
+                }),
+                None => MessageField::none(),
+            };
             let mut msg_out = RendezvousMessage::new();
             let peer_is_lan = self.is_lan(peer_addr);
             let is_lan = self.is_lan(addr);
@@ -1148,6 +1271,7 @@ impl RendezvousServer {
                 msg_out.set_fetch_local_addr(FetchLocalAddr {
                     socket_addr,
                     relay_server,
+                    control_permissions,
                     ..Default::default()
                 });
             } else {
@@ -1161,6 +1285,7 @@ impl RendezvousServer {
                     socket_addr,
                     nat_type: ph.nat_type,
                     relay_server,
+                    control_permissions,
                     webrtc_sdp_offer: if ph.webrtc_sdp_offer.len() <= WEBRTC_ICE_MAX_OFFER {
                         ph.webrtc_sdp_offer
                     } else {
@@ -1376,14 +1501,26 @@ impl RendezvousServer {
         self.relay_servers = self.relay_servers0.clone();
     }
 
-    fn get_relay_server(&self, _pa: IpAddr, _pb: IpAddr) -> String {
-        if self.relay_servers.is_empty() {
-            return "".to_owned();
-        } else if self.relay_servers.len() == 1 {
-            return self.relay_servers[0].clone();
+    fn get_relay_server(&self, pa: IpAddr, pb: IpAddr) -> String {
+        if self.relay_servers.is_empty() && !self.relay_policy.nodes.is_empty() {
+            let fallback = get_servers(&self.default_relay_servers, "relay-servers");
+            return relay_policy::select(
+                &relay_policy::RelayPolicy::default(),
+                &self.geoip_country,
+                &fallback,
+                pa,
+                pb,
+                &ROTATION_RELAY_SERVER,
+            );
         }
-        let i = ROTATION_RELAY_SERVER.fetch_add(1, Ordering::SeqCst) % self.relay_servers.len();
-        self.relay_servers[i].clone()
+        relay_policy::select(
+            &self.relay_policy,
+            &self.geoip_country,
+            &self.relay_servers,
+            pa,
+            pb,
+            &ROTATION_RELAY_SERVER,
+        )
     }
 
     async fn check_cmd(&self, cmd: &str) -> String {
@@ -1531,6 +1668,35 @@ impl RendezvousServer {
                         "ALWAYS_USE_RELAY: {:?}",
                         ALWAYS_USE_RELAY.load(Ordering::SeqCst)
                     );
+                }
+            }
+            Some("reload-geo" | "rg") => {
+                if geoip_country::configured() {
+                    let tx = self.tx.clone();
+                    tokio::spawn(async move {
+                        match tokio::task::spawn_blocking(geoip_country::load_from_environment).await {
+                            Ok(Ok(Some(database))) => {
+                                log::info!(
+                                    "Reloaded GeoLite2 Country {} data ({} CSV networks)",
+                                    database.data_format(),
+                                    database.block_count()
+                                );
+                                tx.send(Data::CountryData(database)).ok();
+                            }
+                            Ok(Ok(None)) => {
+                                log::warn!("GeoLite2 country database is not configured");
+                            }
+                            Ok(Err(err)) => {
+                                log::warn!("Unable to reload GeoLite2 country data: {}", err);
+                            }
+                            Err(err) => {
+                                log::warn!("GeoLite2 country data reload task ended unexpectedly: {}", err);
+                            }
+                        }
+                    });
+                    res = "GeoLite2 country data reload requested\n".to_owned();
+                } else {
+                    res = "Set RUSTDESK_GEOIP_MMDB_FILE or RUSTDESK_GEOIP_CSV_DIR to enable GeoLite2 country lookup\n".to_owned();
                 }
             }
             Some("test-geo" | "tg") => {
@@ -1828,9 +1994,7 @@ async fn check_relay_servers(rs0: Arc<RelayServers>, tx: Sender) {
     join_all(futs).await;
     log::debug!("check_relay_servers");
     let rs = std::mem::take(&mut *rs.lock().await);
-    if !rs.is_empty() {
-        tx.send(Data::RelayServers(rs)).ok();
-    }
+    tx.send(Data::RelayServers(rs)).ok();
 }
 
 // temp solution to solve udp socket failure

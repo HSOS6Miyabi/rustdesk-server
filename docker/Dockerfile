@@ -1,4 +1,4 @@
-ARG API_IMAGE_TAG=v3.0.0-api.102
+ARG API_IMAGE_TAG=v3.0.0-api.103
 FROM ghcr.io/hsos6miyabi/rustdesk-api:${API_IMAGE_TAG}
 
 ARG S6_OVERLAY_VERSION=3.2.0.0

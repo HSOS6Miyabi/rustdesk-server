@@ -1,5 +1,7 @@
 # RustDesk 自托管服务端
 
+> **交接入口：[Server 开发交接快照](docs/HANDOFF_SNAPSHOT_2026-11-09.md)、[Server 实施台账](docs/IMPLEMENTATION_LEDGER.md)、[API 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)、[22 项逐项记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/TASK_VERIFICATION_RECORD.md)。** 本仓库的 [Server 实施记录](docs/IMPLEMENTATION_LEDGER.md)、[接手说明](docs/HANDOFF.md)和[测试说明](docs/TESTING.md)提供服务端详细资料。开发分支尚未完成发布里程碑。
+
 本仓库在 [RustDesk Server](https://github.com/rustdesk/rustdesk-server) 与 [lejianwen/rustdesk-server](https://github.com/lejianwen/rustdesk-server) 的基础上持续维护，提供与 [本项目 RustDesk API](https://github.com/HSOS6Miyabi/rustdesk-api) 配合使用的服务器程序。
 
 包含三个主要程序：`hbbs` 负责设备注册与连接协商，`hbbr` 负责中继，`rustdesk-utils` 提供辅助命令。
@@ -20,7 +22,7 @@
 - Docker 镜像：`ghcr.io/hsos6miyabi/rustdesk-server:latest`
 - 仅使用 API 时的镜像：`ghcr.io/hsos6miyabi/rustdesk-api:latest`
 
-每次从主分支 `forapi` 成功发布时，服务端 GitHub Actions 会测试 Rust 源代码、生成两个架构的程序、构建组合镜像，并更新 `latest` 标签。
+开发分支和主分支提交会执行自动化测试。只有在里程碑完成后，从 `v*` 版本标签手动启动工作流并勾选 `milestone_release`，才会生成发行程序、组合镜像并更新 `latest` 标签。
 
 ## 使用组合 Docker 镜像
 
@@ -120,3 +122,27 @@ cargo build --release --locked
 - [本项目 RustDesk API](https://github.com/HSOS6Miyabi/rustdesk-api)
 
 本仓库遵循源代码中的开源许可证，并保留上游项目的版权声明。
+
+## 多中继服务器
+
+开发分支支持与 API 管理界面配合使用多台 hbbr 中继服务器。管理员可设置每个节点的 IP 网络偏好和优先级；hbbs 定期读取节点列表，检查连通性并选择合适的中继。节点断开后可以改选其他活动节点，动态配置清空时恢复原有中继地址。
+
+只需单台中继时，可以继续使用 `hbbs -r relay.example.com:21117`。多中继的配置方法见 [环境变量说明](docs/environment-variables.md)；自动化测试和维护信息见 [开发实施台账](docs/IMPLEMENTATION_LEDGER.md)。
+
+## GeoLite2 国家级中继选择
+
+多中继管理可以使用 GeoLite2 Country MMDB 文件或 CSV 数据判断客户端 IP 所属国家，再按 Web 管理界面设置的国家代码选择中继。精确 CIDR 网络规则优先。未提供国家数据库时，保留现有中继选择方式。
+
+GeoLite2 数据由部署者自行获取。配置环境变量 `RUSTDESK_GEOIP_MMDB_FILE` 指向 MMDB 文件，或使用 `RUSTDESK_GEOIP_CSV_DIR` 指向 CSV 目录。也可以同时配置两种格式，优先查询 MMDB，并用 CSV 补充未识别的地址。更新数据文件后可以在本地管理端口运行 `reload-geo`，无需重启 hbbs。
+
+具体配置见 [环境变量说明](docs/environment-variables.md)。
+
+## 远程控制角色
+
+本开发分支支持通过配套 API 为设备、用户或设备组指定远程控制角色。管理员可以管理键盘、剪贴板、文件传输、摄像头、远程终端、录制、USB 等 14 项权限。
+
+设置 `RUSTDESK_API_CONTROL_ROLE_URL` 和 `RUSTDESK_API_INTERNAL_KEY` 后，hbbs 会在连接协商时把权限传给官方客户端。未配置控制角色时保留原有功能。详情见 [环境变量说明](docs/environment-variables.md) 和 [实施台账](docs/IMPLEMENTATION_LEDGER.md)。
+
+## 可选的服务器连接访问规则
+
+本开发分支可以从配套 API 检查远程连接请求，允许管理员指定哪些用户和用户组可以访问哪些设备。启用后，新的普通连接和中继连接都需要通过账户登录和规则检查。默认不启用，普通服务器使用方式保持不变。详情见 [环境变量说明](docs/environment-variables.md)。

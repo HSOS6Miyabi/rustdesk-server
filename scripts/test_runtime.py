@@ -3,6 +3,7 @@
 import base64
 import os
 import pathlib
+import random
 import socket
 import subprocess
 import sys
@@ -14,13 +15,14 @@ from test_webrtc_rendezvous import check_webrtc_signaling
 
 def open_port(port, socktype=socket.SOCK_STREAM):
     sock = socket.socket(socket.AF_INET, socktype)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind(("127.0.0.1", port))
     return sock
 
 
 def find_ports():
-    for base in range(40116, 50116, 11):
+    candidates = list(range(40116, 50116, 11))
+    random.SystemRandom().shuffle(candidates)
+    for base in candidates:
         sockets = []
         try:
             sockets = [open_port(base + shift) for shift in (-1, 0, 1, 2, 3)]

@@ -24,7 +24,7 @@
 
 ## 组合镜像包含的 API 版本
 
-服务端 Docker 镜像包含 RustDesk API 和 `hbbs`、`hbbr`。当前组合镜像使用 RustDesk API `v3.0.0-api.102`，以确保 WebClient v2 的 HTTPS/WSS 支持和管理界面能够正常使用。
+服务端 Docker 镜像包含 RustDesk API 和 `hbbs`、`hbbr`。当前组合镜像使用 RustDesk API `v3.0.0-api.103`，以确保 WebClient v2 的 HTTPS/WSS 支持和管理界面能够正常使用。
 
 如果需要更新组合镜像中的 API 版本，请先确认对应的 `ghcr.io/hsos6miyabi/rustdesk-api` 镜像已经发布，再修改 `docker/Dockerfile` 中的 `API_IMAGE_TAG` 默认值，以及 `.github/workflows/release-server.yml` 的同名构建参数。提交后由 GitHub Actions 测试并发布新镜像。
 
@@ -40,4 +40,13 @@ python3 scripts/test_runtime.py target/debug/hbbs target/debug/hbbr
 
 测试程序启动实际的 `hbbs` 和 `hbbr` 进程，检查 TCP、WebSocket 和 UDP 服务。WebRTC 测试位于 `scripts/test_webrtc_rendezvous.py`，会通过 WebSocket 发起 SDP Offer，模拟被控设备返回 SDP Answer，并发送 ICE 候选地址，检查服务器能否将这些消息转发至正确的设备。
 
-GitHub Actions 在发布组合 Docker 镜像后还会启动镜像内的 API、`hbbs` 和 `hbbr`，检查监听端口和 HTTP 响应。桌面画面、键盘、鼠标及真实设备的长期连接仍需在安装 RustDesk 客户端的运行环境中检查。
+达到里程碑、确认两个仓库功能及测试结果后，从 `v*` 标签手动启动带有 `milestone_release` 选项的发布流程。GitHub Actions 在正式发布组合 Docker 镜像后还会启动镜像内的 API、`hbbs` 和 `hbbr`，检查监听端口和 HTTP 响应。桌面画面、键盘、鼠标及真实设备的长期连接仍需在安装 RustDesk 客户端的运行环境中检查。
+
+
+## 2026 年 11 月里程碑发行
+
+本次里程碑使用 Server 版本 `v1.1.17-api.21`，组合容器引用 API 版本 `v3.0.0-api.103`。发布前先确认 API 对应的 GitHub Release 和 `ghcr.io/hsos6miyabi/rustdesk-api:v3.0.0-api.103` 多架构镜像均已生成。
+
+本次经维护者批准合并后，`forapi` 分支上带有专用发行标识的合并提交会启动现有发行工作流，生成 Linux AMD64 和 ARM64 可执行程序、GitHub Release，以及 `ghcr.io/hsos6miyabi/rustdesk-server:v1.1.17-api.21` 和 `latest` 多架构镜像。普通后续提交仍按既有测试流程执行，正式发行需要再次明确批准。
+
+实际 Windows、macOS、Android、iOS 终端的远程控制，以及跨地区中继、真实 SMTP 和生产数据恢复需要另行开展环境测试。测试方法与结果记录在配套 API 仓库的 `docs/TASK_VERIFICATION_RECORD.md`。

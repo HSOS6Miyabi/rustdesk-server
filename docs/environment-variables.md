@@ -261,3 +261,128 @@ ExecStart=/usr/bin/hbbs
 
 Ports 21118/21119 are only needed for the web client; you can omit them
 otherwise.
+
+## 与 RustDesk API 配合使用的设备登记
+
+以下环境变量用于可选的设备预先登记功能。默认不启用，适合小型团队沿用原来的设备注册方式。
+
+| 环境变量 | 作用 | 示例 |
+| --- | --- | --- |
+| `REQUIRE_DEVICE_DEPLOYMENT` | 设置为 `Y` 后，设备注册前必须获得 API 许可 | `N` |
+| `RUSTDESK_API_INTERNAL_KEY` | API 与服务端之间的内部访问密钥 | 使用随机生成的长字符串 |
+| `RUSTDESK_API_INTERNAL_URL` | 服务端查询设备登记结果的内部接口地址 | `http://127.0.0.1:21114/internal/v1/device/authorize` |
+| `RUSTDESK_API_JWT_KEY` | 要求用户登录时验证会话令牌的密钥 | 与 API 使用相同的密钥 |
+
+组合容器中可以用 `REQUIRE_DEVICE_DEPLOYMENT=Y` 和 `RUSTDESK_API_INTERNAL_KEY` 同时配置 API 与 `hbbs`。API 支持使用相同名称的环境变量。
+
+分开部署时，需要让 `RUSTDESK_API_INTERNAL_URL` 指向 API 的内部服务地址，并限制该接口的网络访问。跨服务器通信建议使用 HTTPS 或可信任的内部网络。
+
+当 `MUST_LOGIN=Y` 时，必须配置 `RUSTDESK_API_JWT_KEY`。不需要限制账户登录时可以继续使用 `MUST_LOGIN=N`。
+
+## 多中继服务器与 API 自动同步
+
+只有希望通过 API Web 管理界面配置多个 hbbr 节点时，才需要启用此功能。单中继部署可以继续使用现有的 `hbbs -r`、`relay-servers` 参数。
+
+| 环境变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `RUSTDESK_API_RELAY_NODES_URL` | 空 | API 内部节点列表地址，例如 `http://127.0.0.1:21114/internal/v1/relay/nodes`。留空时不启用自动同步 |
+| `RUSTDESK_API_INTERNAL_KEY` | 空 | 与 API 配置一致的内部访问密钥 |
+| `RUSTDESK_API_RELAY_SYNC_SECONDS` | `30` | 两次配置同步之间的秒数，支持 10 至 3600 |
+
+例如：
+
+```bash
+export RUSTDESK_API_RELAY_NODES_URL="http://127.0.0.1:21114/internal/v1/relay/nodes"
+export RUSTDESK_API_INTERNAL_KEY="替换为与 API 一致的内部通信密钥"
+export RUSTDESK_API_RELAY_SYNC_SECONDS=30
+hbbs -r relay-backup.example.com:21117
+```
+
+管理员在 API 管理界面中增加中继节点，填写公开的 `host:port` 地址，并可设置 IPv4/IPv6 的 CIDR 网络范围。hbbs 按当前在线节点和连接双方的 IP 网络选择中继。没有匹配范围时，采用原有的轮流选择方法。没有配置托管中继或 API 返回空节点时，使用 `-r` 中指定的原有中继。
+
+内部节点列表应通过本地网络、受信任的私有网络或 HTTPS 访问。如果使用 Docker，API 与 hbbs 必须能够通过配置的地址相互通信；不能无条件使用宿主机的 `127.0.0.1`。
+
+## 使用 GeoLite2 Country MMDB 或 CSV 识别客户端国家
+
+如果希望按国家自动选择中继，在运行 hbbs 的服务器上下载并解压 MaxMind GeoLite2 Country CSV。
+
+需要以下三个文件放置在同一目录：
+
+```text
+/opt/rustdesk/geoip/
+  GeoLite2-Country-Locations-en.csv
+  GeoLite2-Country-Blocks-IPv4.csv
+  GeoLite2-Country-Blocks-IPv6.csv
+```
+
+启动 hbbs 前设置：
+
+```bash
+export RUSTDESK_GEOIP_CSV_DIR="/opt/rustdesk/geoip"
+```
+
+也可以直接提供 GeoLite2 Country MMDB 文件：
+
+```bash
+export RUSTDESK_GEOIP_MMDB_FILE="/opt/rustdesk/geoip/GeoLite2-Country.mmdb"
+```
+
+`RUSTDESK_GEOIP_MMDB_FILE` 与 `RUSTDESK_GEOIP_CSV_DIR` 可以分别设置，也可以同时设置。两种格式同时配置时，优先使用 MMDB 的国家代码；对于 MMDB 未覆盖的地址，再查询 CSV。配置变更后重新启动 hbbs；文件内容更新后使用下述 `reload-geo` 命令重新读取。若新文件有错误，正在运行的服务器保留此前加载成功的地理数据。
+
+GeoLite2 文件获取方式和 CSV 字段说明见 [MaxMind 开发者文档](https://dev.maxmind.com/geoip/docs/databases/city-and-country/)。
+
+使用 API 的“中继节点管理”，在国家代码字段填写两位 ISO 国家代码，例如 `JP,US`。hbbs 会根据客户端 IP 的国家归属优先选择指定节点。如果管理员还设置了精确 CIDR 网络范围，精确网络规则将优先使用。
+
+MMDB 或 CSV 文件更新后，在 hbbs 的本地管理端口发送 `reload-geo`：
+
+```bash
+printf 'reload-geo' | nc 127.0.0.1 21115
+```
+
+如果使用自定义 ID 服务端端口，请将 21115 改成 `PORT-1`。
+
+未设置任何 GeoLite2 环境变量时，其他中继设置仍然有效。GeoLite2 数据不包含在仓库和 Docker 镜像中，需要管理员自行准备。在 Docker 中使用时，将 MMDB 文件或 CSV 目录挂载到容器并设置相应的容器内路径。
+
+## 从 API 获取远程控制角色
+
+管理员可在 API 网页为设备、用户、设备组分配远程控制角色。要让 hbbs 在连接时向官方 RustDesk 客户端发送这些权限，设置以下变量：
+
+| 环境变量 | 默认值 | 作用 |
+| --- | --- | --- |
+| `RUSTDESK_API_CONTROL_ROLE_URL` | 空 | 内部控制权限接口地址，例如 `http://127.0.0.1:21114/internal/v1/control/permissions`，不配置时保持原有权限 |
+| `RUSTDESK_API_INTERNAL_KEY` | 空 | 与 API 配置一致的内部通信密钥 |
+| `RUSTDESK_API_CONTROL_CACHE_SECONDS` | `5` | 按设备缓存权限结果的时间，允许 0 至 60 秒 |
+
+示例：
+
+```bash
+export RUSTDESK_API_CONTROL_ROLE_URL="http://127.0.0.1:21114/internal/v1/control/permissions"
+export RUSTDESK_API_INTERNAL_KEY="替换为与 API 一致的内部通信密钥"
+export RUSTDESK_API_CONTROL_CACHE_SECONDS=5
+```
+
+当管理员在 API 中为设备分配角色后，hbbs 会在下一次连接协商时向被控客户端传送生效的 `ControlPermissions`。所有权限状态均按官方协议执行：`0` 沿用设备设置，`1` 禁止，`2` 允许。未分配角色时，客户端继续使用自己的权限设置。
+
+API 与 hbbs 分别部署时，要把内部接口地址设置为 hbbs 实际能够访问的地址。Docker 容器中的 `127.0.0.1` 指向该容器自身，跨容器部署需要使用实际的内部服务名称或 IP 地址。
+
+## 按用户和群组管理远程连接许可
+
+需要集中控制不同成员可访问的远程设备时，可以启用严格连接许可。管理员先在 API 的“连接访问规则”页面创建需要的允许规则，再设置以下环境变量。
+
+| 环境变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `RUSTDESK_API_CONNECTION_ACCESS_URL` | 空 | 内部连接授权地址，例如 `http://127.0.0.1:21114/internal/v1/connection/authorize`，留空不启用 |
+| `RUSTDESK_API_INTERNAL_KEY` | 空 | 与 API 使用相同的内部通信密钥 |
+
+示例：
+
+```bash
+export RUSTDESK_API_CONNECTION_ACCESS_URL="http://127.0.0.1:21114/internal/v1/connection/authorize"
+export RUSTDESK_API_INTERNAL_KEY="替换为与 API 一致的内部通信密钥"
+```
+
+启用后，连接请求中的账户令牌与目标设备 ID 会由 hbbs 发送给 API 判断。设备所有者始终可连接已登记的自己设备。其他用户必须符合管理员配置的允许规则，且不能匹配禁止规则。
+
+严格模式需要正常可用的 API。API 暂时无法访问时，新的连接请求会被拒绝。只有通过 hbbs 协商的连接会执行这些规则，直接通过 IP 地址连接目标设备的行为仍由客户端处理。
+
+在 Docker 部署时，需要使用 hbbs 容器能够访问到的 API 地址；跨机器时建议通过受保护的内网或 HTTPS 连接。未配置 `RUSTDESK_API_CONNECTION_ACCESS_URL` 时原有连接方式保持不变。

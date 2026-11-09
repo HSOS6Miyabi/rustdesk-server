@@ -1,6 +1,6 @@
 # RustDesk Server 开发实施台账
 
-> **交接入口：[Server 最新开发交接快照](HANDOFF_SNAPSHOT_2026-11-09.md)、[API 与 Server 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)、[22 项逐项记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/TASK_VERIFICATION_RECORD.md)。** Server 已通过 [Rust 编译和实际服务检查 #42653555907](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42653555907) 以及 [AMD64、ARM64 实际 API 联合授权及组合部署 #42653555800](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42653555800)。配套 API 的代码及检查以其 [开发分支](https://github.com/HSOS6Miyabi/rustdesk-api/tree/development/m1-device-management) 和 GitHub Actions 最新运行结果为准。两个仓库的拉取请求继续保持草稿状态，尚未发布新版本。
+> **交接入口：[Server 最新开发交接快照](HANDOFF_SNAPSHOT_2026-11-09.md)、[API 与 Server 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)、[22 项逐项记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/TASK_VERIFICATION_RECORD.md)。** Server 已通过 [Rust 编译和实际服务检查 #42666030849](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42666030849) 以及 [AMD64、ARM64 实际 API 联合授权及组合部署 #42666031144](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42666031144)。配套 API 的代码及检查以其 [开发分支](https://github.com/HSOS6Miyabi/rustdesk-api/tree/development/m1-device-management) 和 GitHub Actions 最新运行结果为准。两个仓库的拉取请求继续保持草稿状态，尚未发布新版本。
 
 本文件继续保留各项服务端功能的原始提交和测试记录，全部任务的当前状态、优先级与发布条件统一从上述总账查阅。
 
@@ -315,8 +315,8 @@ Server 的实际 API 与 hbbs 联合测试继续通过 `.github/workflows/milest
 
 | 验证项目 | GitHub Actions 结果 |
 | --- | --- |
-| Server Rust 编译、单元和协议测试 | [#42653555907](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42653555907)：成功 |
-| AMD64 与 ARM64 的实际 API、hbbs、hbbr、Docker、设备权限及数据保存 | [#42653555800](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42653555800)：成功 |
+| Server Rust 编译、单元和协议测试 | [#42666030849](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42666030849)：成功 |
+| AMD64 与 ARM64 的实际 API、hbbs、hbbr、Docker、设备权限及数据保存 | [#42666031144](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42666031144)：成功 |
 | API Go 综合、管理页面和 WebClient | [#42653315805](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42653315805)：成功 |
 | API 官方 Linux 客户端部署与分配 | [#42653315702](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42653315702)：成功 |
 | API SQLite、MySQL、PostgreSQL 数据库检查 | [#42653315887](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42653315887)：成功 |
@@ -335,3 +335,19 @@ API 代码提交 [3d5f4db1](https://github.com/HSOS6Miyabi/rustdesk-api/commit/3
 - [数据库迁移及恢复 #42655936179](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42655936179)：成功。
 
 Server 的 `.github/workflows/milestone-preflight.yml` 将配套 API 的 Go 检查与实际 API、`hbbs` 联合测试一起执行，持续核对两个开发分支的兼容情况。真实两终端远程控制仍在 T001、T003、T004、T014 的实际设备测试范围内。
+
+
+## 2026-11-10：实际登录、会话撤销与 WebRTC 联合测试
+
+Server 的 `scripts/test_real_api_strict_combination.py` 在临时环境中运行实际 API、数据库和 `hbbs`，通过 API 的登录接口取得签名 JWT，然后测试账户访问许可、控制权限、WebRTC SDP 应答与 ICE 信息转发、设备撤销以及 API 服务中断时的拒绝行为。退出登录后，测试再次登录同一账户，检查新旧 JWT 不同，并确认旧令牌依旧无法建立连接。
+
+对应 API 已为每次签发的 JWT 生成独立随机标识，保留既有签名算法及客户端使用方式。测试使用独立生成的账户凭据和临时服务器密钥。
+
+| 检查范围 | 已完成的检查 |
+| --- | --- |
+| 实际 API 登录、JWT 唯一性、Go 与浏览器检查 | [API #42666929269](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42666929269)：成功 |
+| Server Rust 单元与协议检查 | [Server #42666030849](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42666030849)：成功 |
+| AMD64 和 ARM64 的实际 API、`hbbs`、WebRTC 与组合容器运行 | [Server #42666031144](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42666031144)：成功 |
+| Windows、Linux、macOS 与 Android 模拟器客户端启动 | [API #42666929318](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42666929318)：成功 |
+
+真实多终端的远程操作、账户双重认证、跨地区公网中继、外部 SMTP、生产业务数据恢复，以及目标服务器部署仍按 [T001–T022 逐项任务记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/TASK_VERIFICATION_RECORD.md) 检查。两个 PR 保留草稿状态，待全部发布前检查完成后再合并。

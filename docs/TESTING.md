@@ -159,3 +159,16 @@ go test ./http/controller/api -run '^TestManagedHeartbeatChecksApprovedDeploymen
 ```
 
 检查已批准、未登记和撤销许可后的心跳策略响应，并保持现有普通设备心跳行为。该测试已包含在本仓库双架构联合工作流运行的 API Go 检查中。
+
+
+## 实际 API 登录及 WebRTC 严格模式联合检查
+
+完成 API 与 Server 编译后，在 Server 源代码目录执行：
+
+```bash
+python3 scripts/test_real_api_strict_combination.py /path/to/rustdesk-api/docker-bin/apimain target/release/hbbs
+```
+
+测试启动实际 API 与 `hbbs`，创建临时账户并通过真实 HTTP 登录和登出接口验证 JWT、旧令牌撤销后的拒绝、再次登录签发不同令牌、设备访问规则、控制角色、WebRTC SDP/ICE 和 API 中断时的处理。
+
+[AMD64 和 ARM64 联合检查 #42666031144](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42666031144) 已成功。实际终端与公网网络检查按统一任务记录执行。

@@ -86,6 +86,11 @@ jobs:
           python3 -m py_compile scripts/test_real_api_registration.py
           python3 scripts/test_real_api_registration.py \
             /tmp/rustdesk-api/docker-bin/apimain target/release/hbbs
+      - name: Verify JWT and access rules against the actual API and hbbs
+        run: |
+          python3 -m py_compile scripts/test_real_api_strict_combination.py
+          python3 scripts/test_real_api_strict_combination.py \
+            /tmp/rustdesk-api/docker-bin/apimain target/release/hbbs
       - name: Build combined image without publishing
         run: |
           set -euo pipefail

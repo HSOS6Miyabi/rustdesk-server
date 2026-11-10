@@ -1,14 +1,20 @@
 # RustDesk Server 开发实施台账
 
-> **交接入口：[Server 最新开发交接快照](HANDOFF_SNAPSHOT_2026-11-09.md)、[API 与 Server 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)、[22 项逐项记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/TASK_VERIFICATION_RECORD.md)。** Server 已通过 [Rust 编译和实际服务检查 #42669744309](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42669744309) 以及 [AMD64、ARM64 实际 API 联合授权及组合部署 #42669744598](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42669744598)。配套 API 的代码及检查以其 [开发分支](https://github.com/HSOS6Miyabi/rustdesk-api/tree/development/m1-device-management) 和 GitHub Actions 最新运行结果为准。两个仓库的拉取请求继续保持草稿状态，尚未发布新版本。
+> **正式发行：** [Server v1.1.17-api.21](https://github.com/HSOS6Miyabi/rustdesk-server/releases/tag/v1.1.17-api.21) 和 [API v3.0.0-api.103](https://github.com/HSOS6Miyabi/rustdesk-api/releases/tag/v3.0.0-api.103)。GitHub Actions 已通过 [Server 发行测试 #42690556784](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42690556784) 和 [API 发行测试 #42689275371](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42689275371)。详细资料见[版本与维护说明](HANDOFF_SNAPSHOT_2026-11-09.md)、[统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/master/docs/IMPLEMENTATION_LEDGER.md)与[22 项检查记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/master/docs/TASK_VERIFICATION_RECORD.md)。
 
 本文件继续保留各项服务端功能的原始提交和测试记录，全部任务的当前状态、优先级与发布条件统一从上述总账查阅。
+
+## 当前正式版本与安装信息
+
+Server v1.1.17-api.21 和 API v3.0.0-api.103 已发布 GitHub Release。正式 Docker 镜像分别为 `ghcr.io/hsos6miyabi/rustdesk-server:v1.1.17-api.21` 和 `ghcr.io/hsos6miyabi/rustdesk-api:v3.0.0-api.103`，均支持 Linux AMD64 和 ARM64。Server 组合容器使用 API v3.0.0-api.103。
+
+发行文件、容器内服务启动、JWT、WebRTC 信令与 API 联合通信已通过 GitHub Actions。真实终端的远程控制、跨地区公网中继、真实 SMTP 和正式业务数据库恢复仍需实际环境检查。具体状态见[22 项检查记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/master/docs/TASK_VERIFICATION_RECORD.md)。
 
 ## 2026-11-09：设备登记及连接协议兼容
 
 开发分支：`development/m1-device-management`。
 
-关联 API 分支：`HSOS6Miyabi/rustdesk-api` 的 `development/m1-device-management`。本阶段草稿 PR：Server [#4](https://github.com/HSOS6Miyabi/rustdesk-server/pull/4)，API [#6](https://github.com/HSOS6Miyabi/rustdesk-api/pull/6)。
+配套 API 的正式分支为 `master`；已合并变更见 Server [#4](https://github.com/HSOS6Miyabi/rustdesk-server/pull/4)和 API [#6](https://github.com/HSOS6Miyabi/rustdesk-api/pull/6)。
 
 ### 提交记录
 
@@ -37,7 +43,7 @@
 
 ### 测试安排
 
-Rust 单元测试、程序编译、TCP/UDP/WebSocket 实际服务检查由草稿 PR 的 CI 执行。跨项目的设备 `--deploy` 和 `--assign` 需结合 API 测试，详细说明见 [HANDOFF.md](HANDOFF.md)。
+Rust 单元测试、程序编译和 TCP/UDP/WebSocket 实际服务检查已经由 GitHub Actions 执行。跨项目的设备 `--deploy` 和 `--assign` 需结合 API 测试，详细说明见 [HANDOFF.md](HANDOFF.md)。
 
 发布条件：两个仓库完成相同里程碑后，在 `v*` 标签上手动执行工作流，勾选 `milestone_release`。日常提交不创建 Release。
 
@@ -79,8 +85,8 @@ Rust 单元测试、程序编译、TCP/UDP/WebSocket 实际服务检查由草稿
 
 - API 开发分支：`development/m1-device-management`。
 - API 对应提交：[fc6d7ba](https://github.com/HSOS6Miyabi/rustdesk-api/commit/fc6d7ba1c0b87e304940b0e38197814cb16512a3)。
-- API 草稿 PR：[rustdesk-api #6](https://github.com/HSOS6Miyabi/rustdesk-api/pull/6)。
-- Server 草稿 PR：[rustdesk-server #4](https://github.com/HSOS6Miyabi/rustdesk-server/pull/4)。
+- API PR：[rustdesk-api #6](https://github.com/HSOS6Miyabi/rustdesk-api/pull/6)。
+- Server PR：[rustdesk-server #4](https://github.com/HSOS6Miyabi/rustdesk-server/pull/4)。
 
 API 在数据库的 `relay_nodes` 表保存配置，通过 `GET /internal/v1/relay/nodes` 向 hbbs 返回已启用的节点。请求使用 `X-RustDesk-Internal-Key` 验证。接口需要 API 和 Server 使用相同的内部通信密钥。
 
@@ -161,7 +167,7 @@ GeoLite2 国家级数据库为中继选择增加了可选的地理位置规则�
 - 开发分支：`HSOS6Miyabi/rustdesk-api:development/m1-device-management`。
 - 功能与文档提交：[e850b81](https://github.com/HSOS6Miyabi/rustdesk-api/commit/e850b81dce8f39468cf43cb5d1adb81d79bf65dc)。
 - API 数据库迁移版本：278，增加 `control_roles` 和 `control_role_assignments`。
-- API 草稿 PR：[rustdesk-api #6](https://github.com/HSOS6Miyabi/rustdesk-api/pull/6)。
+- API PR：[rustdesk-api #6](https://github.com/HSOS6Miyabi/rustdesk-api/pull/6)。
 
 API 内部接口 `GET /internal/v1/control/permissions?device_id=...` 返回对应设备生效的 `assigned`、`permissions` 和 `source`。Server 使用 `X-RustDesk-Internal-Key` 请求头读取。权限位编码由官方 `ControlPermissions` 定义，每项使用两个二进制位，值 `0` 代表沿用设备自身设置，`1` 代表禁止，`2` 代表允许。
 
@@ -181,7 +187,7 @@ export RUSTDESK_API_CONTROL_CACHE_SECONDS=5
 - [Server 实际进程协议转发测试](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42569942719)：通过。
 - [配套 API Go 与 Chromium 浏览器测试](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42570243157)：通过。
 
-测试验证实际发送给被控客户端的 Protobuf 控制权限编码。Windows、macOS、Linux 和移动客户端上的各项远程操作行为需在里程碑发布前使用真实客户端检查。两仓库目前保持草稿 PR，未进行正式发布。
+Protobuf 控制权限编码已通过测试。Windows、macOS、Linux 和移动设备的实际远程控制仍需检查。两个仓库均已正式发布。
 
 ## 2026-11-09：可选的服务器连接访问规则
 
@@ -198,11 +204,11 @@ export RUSTDESK_API_CONTROL_CACHE_SECONDS=5
 
 ### 配套 API
 
-- API 草稿 PR：[rustdesk-api #6](https://github.com/HSOS6Miyabi/rustdesk-api/pull/6)。
+- API PR：[rustdesk-api #6](https://github.com/HSOS6Miyabi/rustdesk-api/pull/6)。
 - API 授权规则接口与模型：[146ab63](https://github.com/HSOS6Miyabi/rustdesk-api/commit/146ab634d546185ad6e1ee91343c2188ce1bddee)。
 - API 数据库迁移：280，新增 `access_rules`。
 - API 内部接口：`POST /internal/v1/connection/authorize`。
-- API 代码及运行记录可在 [API 实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md) 查看。
+- API 代码及运行记录可在 [API 实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/master/docs/IMPLEMENTATION_LEDGER.md) 查看。
 
 ### 配置和工作方式
 
@@ -251,7 +257,7 @@ API 无法访问、令牌失效或连接不符合规则时，严格模式会拒�
 - 示例数据库来自 [MaxMind-DB 公开测试数据](https://github.com/maxmind/MaxMind-DB)，与商业或正式 GeoLite2 分发数据分开存放。
 - 正式数据库由实际部署者自行获取。多地区公网的连接质量仍需在发布前验证。
 
-所有修改均保留在 `development/m1-device-management`，两个拉取请求继续保持草稿。首个里程碑仍须等待维护者明确确认，日常开发不创建 Release 或正式镜像。
+本阶段源代码已合并到两个仓库的主分支，正式发行完成。后续代码修改按常规方式测试，新版本另行申请发行批准。
 
 
 ## 2026-11-09：普通服务器部署与 Docker 重启测试
@@ -266,16 +272,16 @@ Server 与 API 的开发分支已完成两种部署方式的自动化运行检�
 
 相关文件为 `scripts/test_native_stack.py`、`scripts/test_persistent_container.py`、`scripts/test_container_image.py` 和 `.github/workflows/milestone-preflight.yml`。测试所用的 API 由同一工作流读取配套开发分支进行编译。镜像仅保存在临时运行环境中，测试结束后清理容器和测试数据卷。
 
-正式使用环境还需分别检查公网连通、系统服务自动启动、备份恢复、真实客户端登录及远程操作。管理者确认首个发布里程碑之前，继续维持草稿拉取请求，不创建正式 Release 或正式 Docker 镜像。
+正式环境仍需检查公网连接、系统服务自动启动、备份恢复、客户端登录及远程控制。本阶段的正式版本已获得维护者批准。
 
 
 ## 2026-11-09：与配套 API 版本 282 的兼容性检查
 
 配套 API 当前开发分支的数据库迁移版本为 282，已支持六种桌面系统与架构的官方安装文件、邮件事件通知及数据库备份恢复检查。
 
-Server 的 `.github/workflows/milestone-preflight.yml` 在运行时从配套 API 的 `development/m1-device-management` 获取代码，并在 AMD64、ARM64 上编译两个项目及启动组合容器。此工作流包含普通进程与 Docker 两种部署方式的服务检查，以及重启后 API 数据和 RustDesk 服务端公钥的保持检查。API 数据库备份与恢复说明可通过 [统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md) 查阅。
+Server 的 `.github/workflows/milestone-preflight.yml` 在运行时从配套 API 的 `development/m1-device-management` 获取代码，并在 AMD64、ARM64 上编译两个项目及启动组合容器。此工作流包含普通进程与 Docker 两种部署方式的服务检查，以及重启后 API 数据和 RustDesk 服务端公钥的保持检查。API 数据库备份与恢复说明可通过 [统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/master/docs/IMPLEMENTATION_LEDGER.md) 查阅。
 
-以上测试均在 GitHub Actions 临时环境运行。真实多平台远程控制、正式 SMTP、地理分布式中继及生产数据库的恢复演练仍属于正式发布前检查项目。两个拉取请求继续保持草稿。
+以上自动化测试已在 GitHub Actions 临时环境运行。多平台远程控制、真实 SMTP、跨地区中继及业务数据库恢复仍需在实际环境中检查。
 
 
 ## 2026-11-09：实际 API、hbbs 的设备登记与严格访问许可
@@ -306,7 +312,7 @@ Server 的 `.github/workflows/milestone-preflight.yml` 在运行时从配套 API
 | 官方 Linux 客户端与实际 API | [API #42652682083](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42652682083)：成功 |
 | SQLite、MySQL、PostgreSQL | [API #42652681804](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42652681804)：成功 |
 
-Server 的实际 API 与 hbbs 联合测试继续通过 `.github/workflows/milestone-preflight.yml` 执行，检验设备登记、JWT、访问许可、控制角色和容器数据保持。两个开发拉取请求保留草稿状态。
+Server 的联合测试通过 `.github/workflows/milestone-preflight.yml` 检查设备登记、JWT、访问许可、控制角色及容器数据保存；正式版本已经发布。
 
 
 ## 2026-11-10：当前配套 API 与 Server 双架构验证
@@ -321,7 +327,7 @@ Server 的实际 API 与 hbbs 联合测试继续通过 `.github/workflows/milest
 | API 官方 Linux 客户端部署与分配 | [#42653315702](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42653315702)：成功 |
 | API SQLite、MySQL、PostgreSQL 数据库检查 | [#42653315887](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42653315887)：成功 |
 
-当前 API 代码参考提交为 `e898985f8b2242e0a4f5e28c1eed2a6ced17b37e`，Server 代码和测试参考提交为 `fcf6bd0481d68ef28974ab8a4cf3015246886339`。目前最近已发布的预发布版本分别为 API `v3.0.0-api.102` 和 Server `v1.1.17-api.20`。本阶段开发工作继续保留在两个草稿拉取请求中。
+正式发行的 API 源代码提交为 `a6d338821cfba2daffa34f9cc3b06605ea1edf03`，Server 源代码提交为 `2d0896ecea4cf147f6fb4d2cdadf3278ab390851`。对应版本分别为 API v3.0.0-api.103 和 Server v1.1.17-api.21。
 
 
 ## 2026-11-10：配套 API 严格登记心跳与许可检查
@@ -350,7 +356,7 @@ Server 的 `scripts/test_real_api_strict_combination.py` 在临时环境中运�
 | AMD64 和 ARM64 的实际 API、`hbbs`、WebRTC 与组合容器运行 | [Server #42666031144](https://github.com/HSOS6Miyabi/rustdesk-server/actions/runs/42666031144)：成功 |
 | Windows、Linux、macOS 与 Android 模拟器客户端启动 | [API #42666929318](https://github.com/HSOS6Miyabi/rustdesk-api/actions/runs/42666929318)：成功 |
 
-真实多终端的远程操作、账户双重认证、跨地区公网中继、外部 SMTP、生产业务数据恢复，以及目标服务器部署仍按 [T001–T022 逐项任务记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/TASK_VERIFICATION_RECORD.md) 检查。两个 PR 保留草稿状态，待全部发布前检查完成后再合并。
+真实多终端的远程操作、账户双重认证、跨地区公网中继、外部 SMTP、生产业务数据恢复，以及目标服务器部署仍按 [T001–T022 逐项任务记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/master/docs/TASK_VERIFICATION_RECORD.md) 检查。本阶段的两个 PR 已合并，正式版本已发布。
 
 
 ## 2026-11-10：撤销设备许可后的连接拒绝

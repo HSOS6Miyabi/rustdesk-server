@@ -45,8 +45,8 @@ python3 scripts/test_runtime.py target/debug/hbbs target/debug/hbbr
 
 ## 2026 年 11 月里程碑发行
 
-本次里程碑使用 Server 版本 `v1.1.17-api.21`，组合容器引用 API 版本 `v3.0.0-api.103`。发布前先确认 API 对应的 GitHub Release 和 `ghcr.io/hsos6miyabi/rustdesk-api:v3.0.0-api.103` 多架构镜像均已生成。
+已正式发布 Server `v1.1.17-api.21`。组合容器引用 API `v3.0.0-api.103`，Linux AMD64、ARM64 镜像均已完成构建和运行检查。
 
-本次经维护者批准合并后，`forapi` 分支上带有专用发行标识的合并提交会启动现有发行工作流，生成 Linux AMD64 和 ARM64 可执行程序、GitHub Release，以及 `ghcr.io/hsos6miyabi/rustdesk-server:v1.1.17-api.21` 和 `latest` 多架构镜像。普通后续提交仍按既有测试流程执行，正式发行需要再次明确批准。
+正式 GitHub Release 已包含 Linux AMD64、ARM64 可执行程序。`ghcr.io/hsos6miyabi/rustdesk-server:v1.1.17-api.21` 和 `latest` 均已发布多架构镜像。后续普通提交继续执行测试，发行新版本需再次取得维护者批准。
 
 实际 Windows、macOS、Android、iOS 终端的远程控制，以及跨地区中继、真实 SMTP 和生产数据恢复需要另行开展环境测试。测试方法与结果记录在配套 API 仓库的 `docs/TASK_VERIFICATION_RECORD.md`。

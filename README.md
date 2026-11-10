@@ -1,6 +1,6 @@
 # RustDesk 自托管服务端
 
-> **交接入口：[Server 开发交接快照](docs/HANDOFF_SNAPSHOT_2026-11-09.md)、[Server 实施台账](docs/IMPLEMENTATION_LEDGER.md)、[API 统一实施台账](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/IMPLEMENTATION_LEDGER.md)、[22 项逐项记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/development/m1-device-management/docs/TASK_VERIFICATION_RECORD.md)。** 本仓库的 [Server 实施记录](docs/IMPLEMENTATION_LEDGER.md)、[接手说明](docs/HANDOFF.md)和[测试说明](docs/TESTING.md)提供服务端详细资料。开发分支尚未完成发布里程碑。
+> **正式发行：** [Server v1.1.17-api.21](https://github.com/HSOS6Miyabi/rustdesk-server/releases/tag/v1.1.17-api.21) 和 [API v3.0.0-api.103](https://github.com/HSOS6Miyabi/rustdesk-api/releases/tag/v3.0.0-api.103)。组合 Docker 镜像：`ghcr.io/hsos6miyabi/rustdesk-server:v1.1.17-api.21`，内含 API v3.0.0-api.103。详细资料见[版本与维护说明](docs/HANDOFF_SNAPSHOT_2026-11-09.md)、[实施台账](docs/IMPLEMENTATION_LEDGER.md)和[22 项检查记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/master/docs/TASK_VERIFICATION_RECORD.md)。
 
 本仓库在 [RustDesk Server](https://github.com/rustdesk/rustdesk-server) 与 [lejianwen/rustdesk-server](https://github.com/lejianwen/rustdesk-server) 的基础上持续维护，提供与 [本项目 RustDesk API](https://github.com/HSOS6Miyabi/rustdesk-api) 配合使用的服务器程序。
 
@@ -22,7 +22,7 @@
 - Docker 镜像：`ghcr.io/hsos6miyabi/rustdesk-server:latest`
 - 仅使用 API 时的镜像：`ghcr.io/hsos6miyabi/rustdesk-api:latest`
 
-开发分支和主分支提交会执行自动化测试。只有在里程碑完成后，从 `v*` 版本标签手动启动工作流并勾选 `milestone_release`，才会生成发行程序、组合镜像并更新 `latest` 标签。
+正式版本已通过自动化测试并发布发行文件和多架构 Docker 镜像。后续功能修改继续执行自动化测试；发行新版本需要维护者批准并运行对应的标签发行工作流。
 
 ## 使用组合 Docker 镜像
 
@@ -139,10 +139,10 @@ GeoLite2 数据由部署者自行获取。配置环境变量 `RUSTDESK_GEOIP_MMD
 
 ## 远程控制角色
 
-本开发分支支持通过配套 API 为设备、用户或设备组指定远程控制角色。管理员可以管理键盘、剪贴板、文件传输、摄像头、远程终端、录制、USB 等 14 项权限。
+当前版本支持通过配套 API 为设备、用户或设备组指定远程控制角色。管理员可以管理键盘、剪贴板、文件传输、摄像头、远程终端、录制、USB 等 14 项权限。
 
 设置 `RUSTDESK_API_CONTROL_ROLE_URL` 和 `RUSTDESK_API_INTERNAL_KEY` 后，hbbs 会在连接协商时把权限传给官方客户端。未配置控制角色时保留原有功能。详情见 [环境变量说明](docs/environment-variables.md) 和 [实施台账](docs/IMPLEMENTATION_LEDGER.md)。
 
 ## 可选的服务器连接访问规则
 
-本开发分支可以从配套 API 检查远程连接请求，允许管理员指定哪些用户和用户组可以访问哪些设备。启用后，新的普通连接和中继连接都需要通过账户登录和规则检查。默认不启用，普通服务器使用方式保持不变。详情见 [环境变量说明](docs/environment-variables.md)。
+当前版本可以从配套 API 检查远程连接请求，允许管理员指定哪些用户和用户组可以访问哪些设备。启用后，新的普通连接和中继连接都需要通过账户登录和规则检查。默认不启用，普通服务器使用方式保持不变。详情见 [环境变量说明](docs/environment-variables.md)。

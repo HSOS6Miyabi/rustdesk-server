@@ -164,7 +164,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           build-args: |
             S6_ARCH=${{ matrix.s6arch }}
-            API_IMAGE_TAG=v3.0.0-api.118
+            API_IMAGE_TAG=v3.0.0-api.119
           push: true
           tags: ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}-${{ matrix.arch }}
       - name: Run API and RustDesk container integration test

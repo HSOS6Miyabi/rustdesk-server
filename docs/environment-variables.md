@@ -34,6 +34,20 @@ in the inherited process environment.
 
 ---
 
+## Saved administration settings
+
+The ID server saves changes made through the administration console to
+`rustdesk-server-settings.json` in its working directory. This includes the relay
+server list, the forced-relay switch, and the mandatory-login switch. After an
+administrator saves one of these settings, the saved value takes precedence
+over the launch-time setting for that option.
+
+In the combined Docker image, `hbbs` runs in `/data`. Keep the `/data` volume
+mounted when replacing the container. The API database is stored separately in
+`/app/data`; preserve both volumes. The optional
+`RUSTDESK_SERVER_SETTINGS_FILE` environment variable changes the settings
+file path. Its parent directory must already exist and be writable.
+
 ## `hbbs` — ID / rendezvous server
 
 | Variable | CLI flag | Default | Description |

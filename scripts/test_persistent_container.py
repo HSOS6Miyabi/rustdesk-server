@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Verify that recreating the combined Docker container preserves API and hbbs data."""
 import hashlib
+import json
+import shlex
 import os
 import socket
 import sqlite3
@@ -47,6 +49,12 @@ def wait_for_services(container):
     raise TimeoutError(f"services were not ready after starting the container: {last_error}")
 
 
+def server_command(container, command):
+    quoted = shlex.quote(command)
+    shell = "exec 3<>/dev/tcp/127.0.0.1/21115; printf %s " + quoted + " >&3; cat <&3"
+    return docker("exec", container, "/bin/bash", "-c", shell)
+
+
 def state_of(container):
     with tempfile.TemporaryDirectory() as tmp:
         backup = os.path.join(tmp, "rustdeskapi.db")
@@ -66,7 +74,8 @@ def state_of(container):
         public_key = docker("exec", container, "cat", "/data/id_ed25519.pub")
         if len(public_key.strip()) < 20:
             raise AssertionError("the RustDesk identity public key is missing")
-        return (user, latest, hashlib.sha256(public_key.encode()).hexdigest())
+        settings = json.loads(docker("exec", container, "cat", "/data/rustdesk-server-settings.json"))
+        return (user, latest, hashlib.sha256(public_key.encode()).hexdigest(), settings)
 
 
 def launch(container, image, api_volume, server_volume):
@@ -96,16 +105,32 @@ def main():
             docker("volume", "create", name)
             created.append(name)
         snapshots = []
-        for _ in range(2):
+        for attempt in range(2):
             launch(container, image, api_volume, server_volume)
             running = True
             wait_for_services(container)
+            if attempt == 0:
+                for command in (
+                    "must-login Y",
+                    "always-use-relay Y",
+                    "relay-servers 127.0.0.1:31117",
+                ):
+                    response = server_command(container, command)
+                    if response.startswith("ERROR:"):
+                        raise AssertionError(response)
+                time.sleep(0.5)
+            if "true" not in server_command(container, "must-login").lower():
+                raise AssertionError("mandatory login did not survive recreation")
+            if "true" not in server_command(container, "always-use-relay").lower():
+                raise AssertionError("forced relay did not survive recreation")
+            if "127.0.0.1:31117" not in server_command(container, "relay-servers"):
+                raise AssertionError("relay server list did not survive recreation")
             snapshots.append(state_of(container))
             docker("rm", "-fv", container)
             running = False
         if snapshots[0] != snapshots[1]:
-            raise AssertionError("the API accounts, schema or RustDesk server key changed")
-        print("API SQLite accounts and schema and hbbs identity persisted across container recreation.")
+            raise AssertionError("the API accounts, server identity or saved server settings changed")
+        print("API accounts, RustDesk keys and all three server settings survived container recreation.")
     except Exception:
         if running:
             try:

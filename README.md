@@ -1,6 +1,6 @@
 # RustDesk 自托管服务端
 
-> **正式发行：** [Server v1.1.17-api.22](https://github.com/HSOS6Miyabi/rustdesk-server/releases/tag/v1.1.17-api.22) 和 [API v3.0.0-api.118](https://github.com/HSOS6Miyabi/rustdesk-api/releases/tag/v3.0.0-api.118)。组合 Docker 镜像：`ghcr.io/hsos6miyabi/rustdesk-server:v1.1.17-api.22`，内含 API v3.0.0-api.118。详细资料见[版本与维护说明](docs/HANDOFF_SNAPSHOT_2026-11-09.md)、[实施台账](docs/IMPLEMENTATION_LEDGER.md)和[22 项检查记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/master/docs/TASK_VERIFICATION_RECORD.md)。
+> **正式发行：** [Server v1.1.17-api.22](https://github.com/HSOS6Miyabi/rustdesk-server/releases/tag/v1.1.17-api.22) 和 [API v3.0.0-api.119](https://github.com/HSOS6Miyabi/rustdesk-api/releases/tag/v3.0.0-api.119)。组合 Docker 镜像：`ghcr.io/hsos6miyabi/rustdesk-server:v1.1.17-api.22`，内含 API v3.0.0-api.119。详细资料见[版本与维护说明](docs/HANDOFF_SNAPSHOT_2026-11-09.md)、[实施台账](docs/IMPLEMENTATION_LEDGER.md)和[22 项检查记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/master/docs/TASK_VERIFICATION_RECORD.md)。
 
 本仓库在 [RustDesk Server](https://github.com/rustdesk/rustdesk-server) 与 [lejianwen/rustdesk-server](https://github.com/lejianwen/rustdesk-server) 的基础上持续维护，提供与 [本项目 RustDesk API](https://github.com/HSOS6Miyabi/rustdesk-api) 配合使用的服务器程序。
 

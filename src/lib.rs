@@ -10,3 +10,4 @@ mod relay_policy;
 mod geoip_country;
 mod control_roles;
 mod connection_access;
+mod persisted_options;

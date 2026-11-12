@@ -42,6 +42,7 @@ use ipnetwork::Ipv4Network;
 use crate::jwt;
 use crate::device_deployment;
 use crate::relay_policy;
+use crate::persisted_options;
 use crate::geoip_country;
 use crate::control_roles;
 use crate::connection_access;
@@ -272,6 +273,7 @@ impl RendezvousServer {
         key: &str,
         rmem: usize,
     ) -> ResultType<()> {
+        let saved_settings = persisted_options::load()?;
         let (key, sk) = Self::get_server_sk(key)?;
         let nat_port = port - 1;
         let ws_port = port + 2;
@@ -313,7 +315,8 @@ impl RendezvousServer {
                 geoip_country::CountryDatabase::default()
             }
         };
-        let default_relay_servers = get_arg("relay-servers");
+        let default_relay_servers = saved_settings.relay_servers.clone()
+            .unwrap_or_else(|| get_arg("relay-servers"));
         let mut rs = Self {
             tcp_punch: Arc::new(Mutex::new(HashMap::new())),
             webrtc_ice_routes: Arc::new(Mutex::new(HashMap::new())),
@@ -353,9 +356,11 @@ impl RendezvousServer {
         log::info!("Listening on websocket {}", listener3.local_addr()?);
         log::info!("MAX_MESSAGE_KB={}", *MAX_MESSAGE >> 10);
         let test_addr = get_arg("TEST_HBBS");
-        if get_arg("ALWAYS_USE_RELAY").to_uppercase() == "Y" {
-            ALWAYS_USE_RELAY.store(true, Ordering::SeqCst);
-        }
+        ALWAYS_USE_RELAY.store(
+            saved_settings.always_use_relay.unwrap_or_else(||
+                get_arg("ALWAYS_USE_RELAY").eq_ignore_ascii_case("Y")),
+            Ordering::SeqCst,
+        );
         log::info!(
             "ALWAYS_USE_RELAY={}",
             if ALWAYS_USE_RELAY.load(Ordering::SeqCst) {
@@ -366,16 +371,11 @@ impl RendezvousServer {
         );
 
         let must_login = get_arg("must-login");
-        log::debug!("must_login={}", must_login);
-        if must_login.to_uppercase() == "Y"
-            || (must_login == ""
-                && std::env::var("MUST_LOGIN")
-                    .unwrap_or_default()
-                    .to_uppercase()
-                    == "Y")
-        {
-            MUST_LOGIN.store(true, Ordering::SeqCst);
-        }
+        let must_login = saved_settings.must_login.unwrap_or_else(||
+            must_login.eq_ignore_ascii_case("Y") ||
+            (must_login.is_empty() && std::env::var("MUST_LOGIN")
+                .unwrap_or_default().eq_ignore_ascii_case("Y")));
+        MUST_LOGIN.store(must_login, Ordering::SeqCst);
 
         if MUST_LOGIN.load(Ordering::SeqCst) && jwt::SECRET.is_empty() {
             bail!("RUSTDESK_API_JWT_KEY must be configured when MUST_LOGIN=Y");
@@ -1543,7 +1543,12 @@ impl RendezvousServer {
             }
             Some("relay-servers" | "rs") => {
                 if let Some(rs) = fds.next() {
-                    self.tx.send(Data::RelayServers0(rs.to_owned())).ok();
+                    if let Err(err) = persisted_options::update(|options|
+                        options.relay_servers = Some(rs.to_owned())) {
+                        res = format!("ERROR: Unable to save relay server settings: {err}\n");
+                    } else {
+                        self.tx.send(Data::RelayServers0(rs.to_owned())).ok();
+                    }
                 } else {
                     for ip in self.relay_servers.iter() {
                         let _ = writeln!(res, "{ip}");
@@ -1655,13 +1660,14 @@ impl RendezvousServer {
                 }
             }
             Some("always-use-relay" | "aur") => {
-                if let Some(rs) = fds.next() {
-                    if rs.to_uppercase() == "Y" {
-                        ALWAYS_USE_RELAY.store(true, Ordering::SeqCst);
+                if let Some(value) = fds.next() {
+                    let enabled = value.eq_ignore_ascii_case("Y");
+                    if let Err(err) = persisted_options::update(|options|
+                        options.always_use_relay = Some(enabled)) {
+                        res = format!("ERROR: Unable to save forced-relay setting: {err}\n");
                     } else {
-                        ALWAYS_USE_RELAY.store(false, Ordering::SeqCst);
+                        ALWAYS_USE_RELAY.store(enabled, Ordering::SeqCst);
                     }
-                    self.tx.send(Data::RelayServers0(rs.to_owned())).ok();
                 } else {
                     let _ = writeln!(
                         res,
@@ -1713,11 +1719,15 @@ impl RendezvousServer {
                 }
             }
             Some("must-login" | "ml") => {
-                if let Some(rs) = fds.next() {
-                    if rs.to_uppercase() == "Y" {
-                        MUST_LOGIN.store(true, Ordering::SeqCst);
+                if let Some(value) = fds.next() {
+                    let enabled = value.eq_ignore_ascii_case("Y");
+                    if enabled && jwt::SECRET.is_empty() {
+                        res = "ERROR: RUSTDESK_API_JWT_KEY is required when login is enforced\n".to_owned();
+                    } else if let Err(err) = persisted_options::update(|options|
+                        options.must_login = Some(enabled)) {
+                        res = format!("ERROR: Unable to save mandatory-login setting: {err}\n");
                     } else {
-                        MUST_LOGIN.store(false, Ordering::SeqCst);
+                        MUST_LOGIN.store(enabled, Ordering::SeqCst);
                     }
                 } else {
                     let _ = writeln!(res, "MUST_LOGIN: {:?}", MUST_LOGIN.load(Ordering::SeqCst));

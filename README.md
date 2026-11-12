@@ -1,6 +1,6 @@
 # RustDesk 自托管服务端
 
-> **正式发行：** [Server v1.1.17-api.21](https://github.com/HSOS6Miyabi/rustdesk-server/releases/tag/v1.1.17-api.21) 和 [API v3.0.0-api.103](https://github.com/HSOS6Miyabi/rustdesk-api/releases/tag/v3.0.0-api.103)。组合 Docker 镜像：`ghcr.io/hsos6miyabi/rustdesk-server:v1.1.17-api.21`，内含 API v3.0.0-api.103。详细资料见[版本与维护说明](docs/HANDOFF_SNAPSHOT_2026-11-09.md)、[实施台账](docs/IMPLEMENTATION_LEDGER.md)和[22 项检查记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/master/docs/TASK_VERIFICATION_RECORD.md)。
+> **正式发行：** [Server v1.1.17-api.22](https://github.com/HSOS6Miyabi/rustdesk-server/releases/tag/v1.1.17-api.22) 和 [API v3.0.0-api.119](https://github.com/HSOS6Miyabi/rustdesk-api/releases/tag/v3.0.0-api.119)。组合 Docker 镜像：`ghcr.io/hsos6miyabi/rustdesk-server:v1.1.17-api.22`，内含 API v3.0.0-api.119。详细资料见[版本与维护说明](docs/HANDOFF_SNAPSHOT_2026-11-09.md)、[实施台账](docs/IMPLEMENTATION_LEDGER.md)和[22 项检查记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/master/docs/TASK_VERIFICATION_RECORD.md)。
 
 本仓库在 [RustDesk Server](https://github.com/rustdesk/rustdesk-server) 与 [lejianwen/rustdesk-server](https://github.com/lejianwen/rustdesk-server) 的基础上持续维护，提供与 [本项目 RustDesk API](https://github.com/HSOS6Miyabi/rustdesk-api) 配合使用的服务器程序。
 
@@ -69,6 +69,24 @@ API 默认使用 `21114/tcp`。为管理界面配置 HTTPS 反向代理后，访
 `MUST_LOGIN=N` 时按 RustDesk 原有方式连接；设置为 `Y` 时，要求连接方先通过 API 登录，并使用 `RUSTDESK_API_JWT_KEY` 验证登录令牌。如果 API 与服务端分开部署，必须使用相同的 JWT 密钥。
 
 `21118` 提供 ID 服务器的 WebSocket，`21119` 提供中继 WebSocket。使用 HTTPS 访问 WebClient v2 时，请将两个 WebSocket 入口通过反向代理配置为 WSS。详细配置见 [API 部署说明](https://github.com/HSOS6Miyabi/rustdesk-api/blob/master/docs/DEPLOYMENT.md)。
+
+## 服务器管理设置与数据保存
+
+在管理界面修改 **中继服务器列表**、**强制使用中继** 或 **客户端登录要求** 后，ID 服务器会立即保存设置。再次启动时会读取上次保存的值，因此不需要重复操作。
+
+使用本仓库的组合 Docker 镜像时，设置保存在 `/data/rustdesk-server-settings.json`；管理员账户、设备和其他 API 数据保存在 `/app/data`。部署时应同时保存这两个目录，例如：
+
+```yaml
+volumes:
+  - ./data/server:/data
+  - ./data/api:/app/data
+```
+
+升级镜像或重新创建容器后，挂载相同的目录即可恢复服务器身份密钥、管理设置与 API 数据。备份时也需要同时备份这两个目录。
+
+首次启动时，ID 服务器会读取环境变量和启动参数；管理员通过管理界面保存某项设置后，以保存的值为准。需要重新使用启动参数时，可以停止服务，备份并移走 `rustdesk-server-settings.json`，再启动服务。
+
+单独部署 `hbbs` 时，设置文件默认保存在其当前工作目录。可以通过环境变量 `RUSTDESK_SERVER_SETTINGS_FILE` 指定完整路径。指定路径所在目录必须存在，且服务器进程应具有写入权限。
 
 ## 单独运行 hbbs 和 hbbr
 

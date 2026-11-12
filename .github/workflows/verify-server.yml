@@ -31,6 +31,8 @@ jobs:
         run: cargo build --bins
       - name: Check live rendezvous and relay services
         run: python3 scripts/test_runtime.py target/debug/hbbs target/debug/hbbr
+      - name: Check that server administration changes survive process restarts
+        run: python3 scripts/test_persisted_settings.py target/debug/hbbs
       - name: Check managed registration with a running hbbs process
         run: python3 scripts/test_device_deployment.py target/debug/hbbs
       - name: Check live relay preferences with a running hbbs process

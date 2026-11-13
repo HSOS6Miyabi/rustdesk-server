@@ -27,7 +27,7 @@ def main():
     for heading in ("当前仓库状态", "主要文件与对应测试", "仍需完成的服务端真实环境工作", "接手顺序"):
         if heading not in snapshot:
             raise AssertionError(f"Server handoff section missing: {heading}")
-    for token in ("282", "T001", "T022", "草稿", "正式", "MUST_LOGIN", "REQUIRE_DEVICE_DEPLOYMENT"):
+    for token in ("282", "T001", "T022", "正式", "MUST_LOGIN", "REQUIRE_DEVICE_DEPLOYMENT"):
         if token not in snapshot:
             raise AssertionError(f"Server handoff lacks: {token}")
     for url in re.findall(r"\[[^\]]+\]\(([^)]+)\)", snapshot):

@@ -4,33 +4,65 @@ on:
   push:
     branches:
       - forapi
+    paths:
+      - .release-version
   pull_request:
     paths:
-      - '.github/workflows/publish-approved-milestone.yml'
+      - .release-version
+      - .github/workflows/publish-approved-milestone.yml
 
 permissions:
   contents: write
   actions: write
 
+concurrency:
+  group: rustdesk-server-approved-version
+  cancel-in-progress: false
+
 jobs:
   dispatch-release:
     runs-on: ubuntu-24.04
     steps:
-      - name: Create release tag and start verified publication
+      - uses: actions/checkout@v4
+      - name: Read and validate the release version
+        id: version
         shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          if [[ "$GITHUB_EVENT_NAME" != "push" ]]; then
-            echo "Publication checks run without creating a release."
-            exit 0
+          VERSION="$(tr -d '\r\n' < .release-version)"
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-api\.[0-9]+$ ]]; then
+            echo "Invalid RustDesk Server release version" >&2
+            exit 1
           fi
-          if ! jq -e '.head_commit.message | contains("release-milestone-server-20261110")' "$GITHUB_EVENT_PATH" >/dev/null; then
-            echo "This commit does not request a milestone release."
-            exit 0
+          echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Tag the approved commit
+        if: github.event_name == 'push'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if existing="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" --jq '.object.sha' 2>/dev/null)"; then
+            if [[ "$existing" != "$GITHUB_SHA" ]]; then
+              echo "The release tag already points to a different commit" >&2
+              exit 1
+            fi
+          else
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f "ref=refs/tags/$RELEASE_TAG" \
+              -f "sha=$GITHUB_SHA" > /dev/null
           fi
-          RELEASE_TAG="v1.1.17-api.21"
-          gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$RELEASE_TAG" -f "sha=$GITHUB_SHA"
-          gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/release-server.yml/dispatches" \
-            -f "ref=$RELEASE_TAG" -F "inputs[milestone_release]=true"
+      - name: Run the tested RustDesk Server release workflow
+        if: github.event_name == 'push'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh workflow run release-server.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref "$RELEASE_TAG" \
+            --field milestone_release=true
+          echo "Dispatched the release workflow for $RELEASE_TAG"

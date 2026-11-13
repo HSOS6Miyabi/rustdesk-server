@@ -1,6 +1,6 @@
 services:
   rustdesk:
-    image: ghcr.io/hsos6miyabi/rustdesk-server:latest
+    image: ${RUSTDESK_SERVER_IMAGE:-ghcr.io/hsos6miyabi/rustdesk-server:latest}
     restart: unless-stopped
     environment:
       TZ: ${TZ:-Asia/Shanghai}

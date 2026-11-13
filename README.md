@@ -1,6 +1,6 @@
 # RustDesk 自托管服务端
 
-> **正式发行：** [Server v1.1.17-api.21](https://github.com/HSOS6Miyabi/rustdesk-server/releases/tag/v1.1.17-api.21) 和 [API v3.0.0-api.103](https://github.com/HSOS6Miyabi/rustdesk-api/releases/tag/v3.0.0-api.103)。组合 Docker 镜像：`ghcr.io/hsos6miyabi/rustdesk-server:v1.1.17-api.21`，内含 API v3.0.0-api.103。详细资料见[版本与维护说明](docs/HANDOFF_SNAPSHOT_2026-11-09.md)、[实施台账](docs/IMPLEMENTATION_LEDGER.md)和[22 项检查记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/master/docs/TASK_VERIFICATION_RECORD.md)。
+> **正式发行：** [Server v1.1.17-api.22](https://github.com/HSOS6Miyabi/rustdesk-server/releases/tag/v1.1.17-api.22) 和 [API v3.0.0-api.103](https://github.com/HSOS6Miyabi/rustdesk-api/releases/tag/v3.0.0-api.103)。组合 Docker 镜像：`ghcr.io/hsos6miyabi/rustdesk-server:v1.1.17-api.22`，内含 API v3.0.0-api.103。详细资料见[版本与维护说明](docs/HANDOFF_SNAPSHOT_2026-11-09.md)、[实施台账](docs/IMPLEMENTATION_LEDGER.md)和[22 项检查记录](https://github.com/HSOS6Miyabi/rustdesk-api/blob/master/docs/TASK_VERIFICATION_RECORD.md)。
 
 本仓库在 [RustDesk Server](https://github.com/rustdesk/rustdesk-server) 与 [lejianwen/rustdesk-server](https://github.com/lejianwen/rustdesk-server) 的基础上持续维护，提供与 [本项目 RustDesk API](https://github.com/HSOS6Miyabi/rustdesk-api) 配合使用的服务器程序。
 
@@ -19,10 +19,20 @@
 
 - [服务端 Releases](https://github.com/HSOS6Miyabi/rustdesk-server/releases)
 - [API Releases](https://github.com/HSOS6Miyabi/rustdesk-api/releases)
-- Docker 镜像：`ghcr.io/hsos6miyabi/rustdesk-server:latest`
-- 仅使用 API 时的镜像：`ghcr.io/hsos6miyabi/rustdesk-api:latest`
+- 服务端组合镜像（GHCR）：`ghcr.io/hsos6miyabi/rustdesk-server:latest`
+- 服务端组合镜像（Docker Hub）：`kenvix/rustdesk-server:latest`
+- 单独部署 API（GHCR）：`ghcr.io/hsos6miyabi/rustdesk-api:latest`
+- 单独部署 API（Docker Hub）：`kenvix/rustdesk-api:latest`
 
-正式版本已通过自动化测试并发布发行文件和多架构 Docker 镜像。后续功能修改继续执行自动化测试；发行新版本需要维护者批准并运行对应的标签发行工作流。
+正式版本通过自动化测试后，同时发布 GHCR 和 Docker Hub 镜像，均支持 Linux AMD64、ARM64，版本标签与 `latest` 标签保持一致。后续功能修改仍需通过自动化测试；维护者更新 `forapi` 分支中的 `.release-version` 后，发布工作流将创建版本标签并执行测试、编译和镜像发布。
+
+可以从任一镜像仓库拉取相同版本的服务端组合镜像：
+
+```bash
+docker pull ghcr.io/hsos6miyabi/rustdesk-server:v1.1.17-api.22
+docker pull kenvix/rustdesk-server:v1.1.17-api.22
+docker pull kenvix/rustdesk-server:latest
+```
 
 ## 使用组合 Docker 镜像
 
@@ -33,7 +43,7 @@
 ```yaml
 services:
   rustdesk:
-    image: ghcr.io/hsos6miyabi/rustdesk-server:latest
+    image: ${RUSTDESK_SERVER_IMAGE:-ghcr.io/hsos6miyabi/rustdesk-server:latest}
     container_name: rustdesk-server
     ports:
       - "21114:21114"
@@ -57,10 +67,10 @@ services:
     restart: unless-stopped
 ```
 
-将域名与 JWT 密钥改成实际配置后运行：
+将域名与 JWT 密钥改成实际配置后运行。默认使用 GHCR 镜像；使用 Docker Hub 时，可以设置镜像地址，其他配置保持不变：
 
 ```bash
-docker compose up -d
+RUSTDESK_SERVER_IMAGE=kenvix/rustdesk-server:v1.1.17-api.22 docker compose up -d
 docker compose logs -f rustdesk
 ```
 
